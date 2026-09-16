@@ -1,0 +1,102 @@
+// Budge v1 — modelo mínimo multi-usuario y multi-moneda.
+// ponytail: sin conversión de moneda en v1; los totales se agrupan por moneda.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum RecurringFrequency {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model User {
+  id           String          @id @default(cuid())
+  email        String          @unique
+  name         String?
+  // Hash bcrypt de la contraseña (login con Credentials + sesiones JWT, sin tablas extra).
+  passwordHash String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  categories   Category[]
+  transactions Transaction[]
+  budgets      Budget[]
+  recurring    RecurringRule[]
+}
+
+model Category {
+  id           String        @id @default(cuid())
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  name         String
+  color        String        @default("#6366f1")
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+  budgets      Budget[]
+  recurring    RecurringRule[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model Transaction {
+  id         String          @id @default(cuid())
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  type       TransactionType
+  amount     Decimal         @db.Decimal(12, 2)
+  currency   String          @db.Char(3) @default("MXN")
+  date       DateTime        @default(now())
+  note       String?
+  category   Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([userId, date])
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String
+  amount     Decimal  @db.Decimal(12, 2)
+  currency   String   @db.Char(3) @default("MXN")
+  // Mes en formato "YYYY-MM".
+  // ponytail: string en vez de fecha para evitar aritmética de meses en v1.
+  month      String
+
+  @@unique([userId, categoryId, month])
+}
+
+model RecurringRule {
+  id         String             @id @default(cuid())
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  type       TransactionType
+  amount     Decimal            @db.Decimal(12, 2)
+  currency   String             @db.Char(3) @default("MXN")
+  frequency  RecurringFrequency
+  nextRun    DateTime
+  note       String?
+  isActive   Boolean            @default(true)
+  category   Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@index([isActive, nextRun])
+}
