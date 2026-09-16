@@ -18,7 +18,7 @@ import {
   createTransaction,
   deleteTransaction,
 } from "@/app/actions/transactions";
-import { btnDangerCls } from "@/components/ui";
+import { DeleteButton } from "@/components/delete-button";
 import { getWorkspaceContext, scopeWorkspace } from "@/lib/workspace";
 
 export default async function DashboardPage({
@@ -202,9 +202,7 @@ export default async function DashboardPage({
               Editar
             </Link>
             <form action={deleteTransaction.bind(null, t.id)}>
-              <button type="submit" className={btnDangerCls} onClick={(e) => { if (!confirm("¿Eliminar este movimiento? Esta acción no se puede deshacer.")) e.preventDefault(); }}>
-                Eliminar
-              </button>
+              <DeleteButton />
             </form>
           </div>
         ))}
