@@ -21,6 +21,16 @@ enum RecurringFrequency {
   YEARLY
 }
 
+enum PaymentMethodType {
+  DEBIT
+  CASH
+  CREDIT_CARD
+}
+enum RecurringKind {
+  MEMBERSHIP
+  SERVICE
+}
+
 model User {
   id           String          @id @default(cuid())
   email        String          @unique
@@ -29,7 +39,7 @@ model User {
   passwordHash String?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
-  primaryCurrency String        @db.Char(3) @default("MXN")
+  primaryCurrency String        @db.Char(3) @default("CRC")
   categories   Category[]
   transactions Transaction[]
   budgets      Budget[]
@@ -38,6 +48,8 @@ model User {
   ownedWorkspaces Workspace[]
   workspaceMemberships WorkspaceMember[]
   sentInvitations WorkspaceInvitation[] @relation("InvitationSender")
+  savings SavingsGoal[]
+  paymentMethods PaymentMethod[]
 }
 
 model ExchangeRate {
@@ -74,6 +86,9 @@ model Workspace {
   budgets Budget[]
   recurring RecurringRule[]
   exchangeRates ExchangeRate[]
+  primaryCurrency String @db.Char(3) @default("CRC")
+  savings SavingsGoal[]
+  paymentMethods PaymentMethod[]
 }
 
 model WorkspaceMember {
@@ -137,9 +152,56 @@ model Transaction {
   updatedAt  DateTime        @updatedAt
   workspace  Workspace?      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String?
+  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+  paymentMethodId String?
 
   @@index([userId, date])
   @@index([workspaceId, date])
+  @@index([paymentMethodId])
+}
+
+model SavingsGoal {
+  id String @id @default(cuid())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String?
+  name String
+  target Decimal @db.Decimal(12,2)
+  balance Decimal @db.Decimal(12,2) @default(0)
+  currency String @db.Char(3) @default("CRC")
+  targetDate DateTime?
+  contributions SavingsContribution[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([userId, workspaceId])
+}
+
+model SavingsContribution {
+  id String @id @default(cuid())
+  goal SavingsGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  goalId String
+  amount Decimal @db.Decimal(12,2)
+  date DateTime @default(now())
+  note String?
+  @@index([goalId, date])
+}
+
+model PaymentMethod {
+  id String @id @default(cuid())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String?
+  name String
+  type PaymentMethodType
+  creditLimit Decimal? @db.Decimal(12,2)
+  closingDay Int?
+  paymentDay Int?
+  transactions Transaction[]
+  recurringRules RecurringRule[]
+  createdAt DateTime @default(now())
+  @@index([userId, workspaceId])
 }
 
 model Budget {
@@ -178,6 +240,11 @@ model RecurringRule {
   updatedAt  DateTime           @updatedAt
   workspace   Workspace?         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String?
+  kind RecurringKind @default(SERVICE)
+  provider String?
+  chargeDay Int?
+  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+  paymentMethodId String?
 
   @@index([isActive, nextRun])
   @@index([workspaceId, isActive, nextRun])

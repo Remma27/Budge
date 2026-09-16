@@ -19,13 +19,14 @@ export default async function EditarPage({
   const { id } = await params;
   const { workspaceId } = await getWorkspaceContext(userId, (await searchParams).workspaceId);
 
-  const [tx, categories] = await Promise.all([
+  const [tx, categories, paymentMethods] = await Promise.all([
     prisma.transaction.findFirst({ where: { id, ...scopeWorkspace(userId, workspaceId) } }),
     prisma.category.findMany({
       where: scopeWorkspace(userId, workspaceId),
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    prisma.paymentMethod.findMany({ where: scopeWorkspace(userId, workspaceId), orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
   if (!tx) notFound();
 
@@ -46,9 +47,11 @@ export default async function EditarPage({
             date: toInputDate(tx.date),
             note: tx.note ?? "",
             categoryId: tx.categoryId ?? "",
+            paymentMethodId: tx.paymentMethodId ?? "",
           }}
           submitLabel="Guardar cambios"
           workspaceId={workspaceId}
+          paymentMethods={paymentMethods}
         />
       </Card>
     </div>

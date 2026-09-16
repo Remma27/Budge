@@ -16,9 +16,10 @@ export interface TransactionInitial {
   date: string;
   note: string;
   categoryId: string;
+  paymentMethodId: string;
 }
 
-const MONEDAS = ["MXN", "USD", "EUR", "COP", "ARS", "CLP", "PEN"];
+const MONEDAS = ["CRC", "MXN", "USD", "EUR", "COP", "ARS", "CLP", "PEN"];
 
 export function TransactionForm({
   action,
@@ -27,6 +28,8 @@ export function TransactionForm({
   submitLabel,
   resetOnSuccess = false,
   workspaceId = null,
+  primaryCurrency = "CRC",
+  paymentMethods = [],
 }: {
   action: TransactionAction;
   categories: { id: string; name: string }[];
@@ -34,6 +37,8 @@ export function TransactionForm({
   submitLabel: string;
   resetOnSuccess?: boolean;
   workspaceId?: string | null;
+  primaryCurrency?: string;
+  paymentMethods?: { id: string; name: string }[];
 }) {
   // ponytail: al guardar con éxito se remonta el form (key) en vez de
   // resetearlo en un effect (evita set-state-in-effect).
@@ -66,7 +71,7 @@ export function TransactionForm({
     <form key={formKey} action={formAction} className="grid gap-3" onSubmit={(event) => {
       if (navigator.onLine) return;
       event.preventDefault(); const fd = new FormData(event.currentTarget); const id = crypto.randomUUID();
-      void enqueue({ id, type: String(fd.get("type")), amount: String(fd.get("amount")), currency: String(fd.get("currency")), date: String(fd.get("date")), note: String(fd.get("note") || ""), categoryId: String(fd.get("categoryId") || "") });
+       void enqueue({ id, type: String(fd.get("type")), amount: String(fd.get("amount")), currency: String(fd.get("currency")), date: String(fd.get("date")), note: String(fd.get("note") || ""), categoryId: String(fd.get("categoryId") || ""), paymentMethodId: String(fd.get("paymentMethodId") || "") });
       setOffline(true); setFormKey((key) => key + 1);
     }}>
       <input type="hidden" name="workspaceId" value={workspaceId ?? ""} /><FormError message={state.ok ? null : state.error} />
@@ -112,7 +117,7 @@ export function TransactionForm({
             name="currency"
             className={inputCls}
             list="monedas"
-            defaultValue={initial?.currency ?? "MXN"}
+             defaultValue={initial?.currency ?? primaryCurrency}
             maxLength={3}
             required
           />
@@ -155,6 +160,13 @@ export function TransactionForm({
         </select>
       </div>
       <div>
+        <label className={labelCls} htmlFor="paymentMethodId">Medio de pago</label>
+        <select id="paymentMethodId" name="paymentMethodId" className={inputCls} defaultValue={initial?.paymentMethodId ?? ""}>
+          <option value="">Sin medio de pago</option>
+          {paymentMethods.map((method) => <option key={method.id} value={method.id}>{method.name}</option>)}
+        </select>
+      </div>
+      <div>
         <label className={labelCls} htmlFor="note">
           Nota (opcional)
         </label>
@@ -174,7 +186,7 @@ export function TransactionForm({
   );
 }
 
-type Queued = { id: string; type: string; amount: string; currency: string; date: string; note: string; categoryId: string };
+type Queued = { id: string; type: string; amount: string; currency: string; date: string; note: string; categoryId: string; paymentMethodId: string };
 function openQueue() { return new Promise<IDBDatabase>((resolve, reject) => { const request = indexedDB.open("budge-offline", 1); request.onupgradeneeded = () => request.result.createObjectStore("queue", { keyPath: "id" }); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); }
 async function enqueue(row: Queued) {
   const db = await openQueue(); db.transaction("queue", "readwrite").objectStore("queue").put(row);

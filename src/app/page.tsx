@@ -38,19 +38,20 @@ export default async function DashboardPage({
   const pagina = Math.max(1, Number(params?.pagina) || 1);
   const { inicio, fin, etiqueta } = rangoMes(mes);
 
-  const [categories, txs, budgets, user, rates] = await Promise.all([
+  const [categories, paymentMethods, txs, budgets, user, rates] = await Promise.all([
     prisma.category.findMany({
       where: scope,
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    prisma.paymentMethod.findMany({ where: scope, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.transaction.findMany({
       where: { ...scope, date: { gte: inicio, lt: fin }, ...(moneda && { currency: moneda }), ...(tipo && { type: tipo }), ...(categoria && { categoryId: categoria }), ...(q && { OR: [{ note: { contains: q, mode: "insensitive" } }, { category: { name: { contains: q, mode: "insensitive" } } }] }) },
       include: { category: { select: { id: true, name: true, color: true } } },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     }),
     prisma.budget.findMany({ where: { ...scope, month: mes }, include: { category: true }, orderBy: { category: { name: "asc" } } }),
-    prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { primaryCurrency: true } }),
+     workspaceId ? prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId }, select: { primaryCurrency: true } }) : prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { primaryCurrency: true } }),
     prisma.exchangeRate.findMany({ where: { userId }, select: { from: true, to: true, rate: true } }),
   ]);
   const pageSize = 20;
@@ -157,15 +158,18 @@ export default async function DashboardPage({
             {
               type: "EXPENSE",
               amount: "",
-              currency: "MXN",
+               currency: user.primaryCurrency,
               date: toInputDate(new Date()),
               note: "",
-              categoryId: "",
+               categoryId: "",
+               paymentMethodId: "",
             } satisfies TransactionInitial
           }
           submitLabel="Agregar"
            resetOnSuccess
            workspaceId={workspaceId}
+           primaryCurrency={user.primaryCurrency}
+           paymentMethods={paymentMethods}
         />
       </Card>
 

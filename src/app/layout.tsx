@@ -56,7 +56,9 @@ export default async function RootLayout({
               </Link>
               <Link href="/presupuestos" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Presupuestos</Link>
                <Link href="/recurrentes" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Recurrentes</Link>
-               <Link href="/moneda" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Moneda</Link>
+                <Link href="/moneda" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Moneda</Link>
+                <Link href="/ahorros" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Ahorros</Link>
+                <Link href="/medios-pago" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Pagos</Link>
                <Link href="/importar" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Importar</Link>
                <Link href="/workspace" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Workspace</Link>
               <span className="flex-1" />

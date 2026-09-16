@@ -49,6 +49,7 @@ export const transactionSchema = z.object({
     .refine(validDate),
   note: z.string().trim().max(280).optional(),
   categoryId: z.string().trim().min(1).optional(),
+  paymentMethodId: z.string().trim().min(1).optional(),
 });
 
 export const budgetSchema = z.object({
@@ -63,6 +64,7 @@ export const recurringSchema = z.object({
   currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/).default("MXN"), frequency: z.enum(["WEEKLY", "MONTHLY", "YEARLY"]),
   nextRun: z.string().trim().refine(validDate), note: z.string().trim().max(280).optional(), categoryId: z.string().trim().min(1).optional(),
 });
+export const recurringChargeDaySchema = z.coerce.number().int().min(1).max(31);
 export const currencySchema = z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/);
 export const exchangeRateSchema = z.object({
   from: currencySchema,

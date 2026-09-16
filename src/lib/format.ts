@@ -4,7 +4,7 @@ export function formatMoney(
 ): string {
   const n = Number(amount);
   try {
-    return new Intl.NumberFormat("es-MX", {
+    return new Intl.NumberFormat(currency === "CRC" ? "es-CR" : "es-MX", {
       style: "currency",
       currency,
     }).format(n);

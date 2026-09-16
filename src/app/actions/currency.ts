@@ -3,12 +3,15 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/get-user";
 import { currencySchema, exchangeRateSchema, firstError, type ActionResult } from "@/lib/validations";
+import { getActionWorkspace } from "@/lib/workspace";
 
 export async function updatePrimaryCurrency(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const userId = await requireUserId();
+  const workspaceId = await getActionWorkspace(userId, String(formData.get("workspaceId") || ""));
   const value = currencySchema.safeParse(formData.get("primaryCurrency"));
   if (!value.success) return { ok: false, error: "Moneda principal inválida" };
-  await prisma.user.update({ where: { id: userId }, data: { primaryCurrency: value.data } });
+  if (workspaceId) await prisma.workspace.update({ where: { id: workspaceId }, data: { primaryCurrency: value.data } });
+  else await prisma.user.update({ where: { id: userId }, data: { primaryCurrency: value.data } });
   revalidatePath("/"); revalidatePath("/moneda");
   return { ok: true };
 }

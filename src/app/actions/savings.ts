@@ -1,0 +1,10 @@
+"use server";
+import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/get-user";
+import { getActionWorkspace } from "@/lib/workspace";
+import { parseFechaLocal } from "@/lib/format";
+import type { ActionResult } from "@/lib/validations";
+export async function createSavings(_p: ActionResult, f: FormData): Promise<ActionResult> { const userId=await requireUserId(); const workspaceId=await getActionWorkspace(userId,String(f.get("workspaceId")||"")); const name=String(f.get("name")||"").trim(); const target=Number(f.get("target")); const currency=String(f.get("currency")||"CRC").toUpperCase(); if(!name||!Number.isFinite(target)||target<=0||!/^[A-Z]{3}$/.test(currency)) return {ok:false,error:"Meta, objetivo o moneda inválidos"}; await prisma.savingsGoal.create({data:{userId,workspaceId,name,target,currency,targetDate:f.get("targetDate")?parseFechaLocal(String(f.get("targetDate"))):null}}); revalidatePath("/ahorros"); revalidatePath("/"); return {ok:true}; }
+export async function addContribution(id:string,_p:ActionResult,f:FormData):Promise<ActionResult>{const userId=await requireUserId();const workspaceId=await getActionWorkspace(userId,String(f.get("workspaceId")||""));const amount=Number(f.get("amount"));const goal=await prisma.savingsGoal.findFirst({where:{id,userId,workspaceId}});if(!goal||!Number.isFinite(amount)||amount<=0)return{ok:false,error:"Aporte inválido"};await prisma.$transaction([prisma.savingsContribution.create({data:{goalId:id,amount,note:String(f.get("note")||"")||null}}),prisma.savingsGoal.update({where:{id},data:{balance:{increment:amount}}})]);revalidatePath("/ahorros");revalidatePath("/");return{ok:true};}
+export async function deleteSavings(id:string){const userId=await requireUserId();await prisma.savingsGoal.deleteMany({where:{id,userId}});revalidatePath("/ahorros");}
