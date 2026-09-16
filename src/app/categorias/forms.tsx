@@ -15,7 +15,7 @@ import {
   renameCategory,
 } from "@/app/actions/categories";
 
-export function NewCategoryForm() {
+export function NewCategoryForm({ workspaceId }: { workspaceId: string | null }) {
   const [formKey, setFormKey] = useState(0);
   const [state, formAction, pending] = useActionState(
     async (prev: ActionResult, fd: FormData) => {
@@ -27,7 +27,7 @@ export function NewCategoryForm() {
   );
 
   return (
-    <form key={formKey} action={formAction} className="grid gap-3">
+    <form key={formKey} action={formAction} className="grid gap-3"><input type="hidden" name="workspaceId" value={workspaceId ?? ""} />
       <FormError message={state.ok ? null : state.error} />
       <div className="flex gap-3">
         <div className="flex-1">
@@ -68,11 +68,13 @@ export function CategoryRow({
   name,
   color,
   count,
+  workspaceId,
 }: {
   id: string;
   name: string;
   color: string;
   count: number;
+  workspaceId: string | null;
 }) {
   const [editing, setEditing] = useState(false);
   const [state, formAction, pending] = useActionState(
@@ -91,7 +93,7 @@ export function CategoryRow({
         style={{ backgroundColor: color }}
       />
       {editing ? (
-        <form action={formAction} className="flex flex-1 items-center gap-2">
+        <form action={formAction} className="flex flex-1 items-center gap-2"><input type="hidden" name="workspaceId" value={workspaceId ?? ""} />
           <input
             name="name"
             defaultValue={name}
@@ -137,7 +139,7 @@ export function CategoryRow({
           >
             Renombrar
           </button>
-          <form action={deleteCategory.bind(null, id)}>
+          <form action={deleteCategory.bind(null, id, workspaceId ?? undefined)}>
             <button type="submit" className={btnDangerCls}>
               Eliminar
             </button>

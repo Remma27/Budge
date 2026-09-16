@@ -2,15 +2,22 @@ import { z } from "zod";
 
 // ponytail: regex propia en vez de z.email() para no depender de la API de cada versión de zod.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const validDate = (v: string) => {
+  const m = DATE_RE.exec(v);
+  if (!m) return false;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return d.getFullYear() === Number(m[1]) && d.getMonth() === Number(m[2]) - 1 && d.getDate() === Number(m[3]);
+};
 
 export const registerSchema = z.object({
   name: z.string().trim().max(100).optional(),
-  email: z.string().trim().max(254).refine((v) => EMAIL_RE.test(v)),
+  email: z.string().trim().toLowerCase().max(254).refine((v) => EMAIL_RE.test(v)),
   password: z.string().min(8).max(128),
 });
 
 export const loginSchema = z.object({
-  email: z.string().trim().max(254).refine((v) => EMAIL_RE.test(v)),
+  email: z.string().trim().toLowerCase().max(254).refine((v) => EMAIL_RE.test(v)),
   password: z.string().min(1).max(128),
 });
 
@@ -39,7 +46,7 @@ export const transactionSchema = z.object({
     .string()
     .trim()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .refine((v) => !Number.isNaN(Date.parse(v))),
+    .refine(validDate),
   note: z.string().trim().max(280).optional(),
   categoryId: z.string().trim().min(1).optional(),
 });
@@ -54,8 +61,14 @@ export const budgetSchema = z.object({
 export const recurringSchema = z.object({
   type: z.enum(["INCOME", "EXPENSE"]), amount: z.string().trim().regex(/^\d{1,10}(\.\d{1,2})?$/).refine((v) => Number(v) > 0),
   currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/).default("MXN"), frequency: z.enum(["WEEKLY", "MONTHLY", "YEARLY"]),
-  nextRun: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/), note: z.string().trim().max(280).optional(), categoryId: z.string().trim().min(1).optional(),
+  nextRun: z.string().trim().refine(validDate), note: z.string().trim().max(280).optional(), categoryId: z.string().trim().min(1).optional(),
 });
+export const currencySchema = z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/);
+export const exchangeRateSchema = z.object({
+  from: currencySchema,
+  to: currencySchema,
+  rate: z.string().trim().regex(/^\d{1,10}(\.\d{1,8})?$/).refine((v) => Number(v) > 0),
+}).refine((v) => v.from !== v.to, { path: ["to"] });
 
 // Mensajes en español por campo (evita depender de los mensajes internos de zod).
 const FIELD_MESSAGES: Record<string, string> = {
@@ -69,6 +82,9 @@ const FIELD_MESSAGES: Record<string, string> = {
   date: "Fecha inválida",
   note: "Nota muy larga (máx. 280 caracteres)",
   categoryId: "Categoría inválida",
+  from: "Moneda de origen inválida",
+  to: "La moneda destino debe ser distinta y válida",
+  rate: "Tasa inválida (debe ser mayor que cero)",
 };
 
 export function firstError(

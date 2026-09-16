@@ -6,19 +6,23 @@ import { toInputDate } from "@/lib/format";
 import { Card, linkCls } from "@/components/ui";
 import { TransactionForm } from "@/components/transaction-form";
 import { updateTransaction } from "@/app/actions/transactions";
+import { getWorkspaceContext, scopeWorkspace } from "@/lib/workspace";
 
 export default async function EditarPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ workspaceId?: string }>;
 }) {
   const userId = await requireUserId();
   const { id } = await params;
+  const { workspaceId } = await getWorkspaceContext(userId, (await searchParams).workspaceId);
 
   const [tx, categories] = await Promise.all([
-    prisma.transaction.findFirst({ where: { id, userId } }),
+    prisma.transaction.findFirst({ where: { id, ...scopeWorkspace(userId, workspaceId) } }),
     prisma.category.findMany({
-      where: { userId },
+      where: scopeWorkspace(userId, workspaceId),
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
@@ -44,6 +48,7 @@ export default async function EditarPage({
             categoryId: tx.categoryId ?? "",
           }}
           submitLabel="Guardar cambios"
+          workspaceId={workspaceId}
         />
       </Card>
     </div>

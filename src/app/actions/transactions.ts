@@ -11,6 +11,7 @@ import {
   transactionSchema,
   type ActionResult,
 } from "@/lib/validations";
+import { getActionWorkspace, requireWorkspaceRole, scopeWorkspace } from "@/lib/workspace";
 
 function parseForm(formData: FormData) {
   return transactionSchema.safeParse({
@@ -23,9 +24,9 @@ function parseForm(formData: FormData) {
   });
 }
 
-async function assertCategory(userId: string, categoryId: string) {
+async function assertCategory(userId: string, categoryId: string, workspaceId: string | null) {
   const cat = await prisma.category.findFirst({
-    where: { id: categoryId, userId },
+    where: { id: categoryId, ...scopeWorkspace(userId, workspaceId) },
   });
   return !!cat;
 }
@@ -35,16 +36,17 @@ export async function createTransaction(
   formData: FormData,
 ): Promise<ActionResult> {
   const userId = await requireUserId();
+  const workspaceId = await getActionWorkspace(userId, String(formData.get("workspaceId") || ""));
   const parsed = parseForm(formData);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   const d = parsed.data;
 
-  if (d.categoryId && !(await assertCategory(userId, d.categoryId))) {
+  if (d.categoryId && !(await assertCategory(userId, d.categoryId, workspaceId))) {
     return { ok: false, error: "Categoría inválida" };
   }
   await prisma.transaction.create({
     data: {
-      userId,
+      userId, workspaceId,
       type: d.type,
       amount: d.amount,
       currency: d.currency,
@@ -63,15 +65,16 @@ export async function updateTransaction(
   formData: FormData,
 ): Promise<ActionResult> {
   const userId = await requireUserId();
+  const workspaceId = await getActionWorkspace(userId, String(formData.get("workspaceId") || ""));
   const parsed = parseForm(formData);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   const d = parsed.data;
 
   const existing = await prisma.transaction.findFirst({
-    where: { id, userId },
+    where: { id, userId, workspaceId },
   });
   if (!existing) return { ok: false, error: "Movimiento no encontrado" };
-  if (d.categoryId && !(await assertCategory(userId, d.categoryId))) {
+  if (d.categoryId && !(await assertCategory(userId, d.categoryId, workspaceId))) {
     return { ok: false, error: "Categoría inválida" };
   }
   await prisma.transaction.update({
@@ -95,6 +98,23 @@ export async function deleteTransaction(id: string): Promise<void> {
     where: { id, userId },
   });
   if (!existing) return;
+  if (existing.workspaceId) await requireWorkspaceRole(userId, existing.workspaceId, (await import("@/generated/prisma/client")).WorkspaceRole.EDITOR);
   await prisma.transaction.delete({ where: { id } });
   revalidatePath("/");
+}
+
+export async function importTransactions(rows: unknown[], requestedWorkspaceId?: string | null): Promise<ActionResult> {
+  const userId = await requireUserId();
+  const workspaceId = await getActionWorkspace(userId, requestedWorkspaceId);
+  if (!Array.isArray(rows) || rows.length === 0 || rows.length > 1000) return { ok: false, error: "El CSV debe contener entre 1 y 1,000 movimientos" };
+  for (const row of rows) {
+    const r = row as Record<string, string>;
+    const parsed = transactionSchema.safeParse({ type: r.type, amount: r.amount, currency: r.currency, date: r.date, note: r.note, categoryId: r.categoryId });
+    if (!parsed.success) return { ok: false, error: `Fila inválida: ${firstError(parsed.error)}` };
+    const d = parsed.data;
+  if (d.categoryId && !(await assertCategory(userId, d.categoryId, workspaceId))) return { ok: false, error: "Categoría inválida" };
+    await prisma.transaction.create({ data: { userId, workspaceId, type: d.type, amount: d.amount, currency: d.currency, date: parseFechaLocal(d.date), note: d.note ?? null, categoryId: d.categoryId ?? null } });
+  }
+  revalidatePath("/");
+  return { ok: true };
 }

@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations";
+import { allowAttempt } from "@/lib/rate-limit";
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -18,6 +19,10 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
+        if (!allowAttempt(`login:${parsed.data.email}`)) {
+          console.warn("login rate limit", { email: parsed.data.email });
+          return null;
+        }
         const user = await prisma.user.findUnique({
           where: { email: parsed.data.email },
         });

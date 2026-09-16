@@ -2,11 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/get-user";
 import { Card } from "@/components/ui";
 import { CategoryRow, NewCategoryForm } from "./forms";
+import { getWorkspaceContext, scopeWorkspace } from "@/lib/workspace";
 
-export default async function CategoriasPage() {
+export default async function CategoriasPage({ searchParams }: { searchParams: Promise<{ workspaceId?: string }> }) {
   const userId = await requireUserId();
+  const { workspaceId } = await getWorkspaceContext(userId, (await searchParams).workspaceId);
   const categories = await prisma.category.findMany({
-    where: { userId },
+    where: scopeWorkspace(userId, workspaceId),
     orderBy: { name: "asc" },
     include: { _count: { select: { transactions: true } } },
   });
@@ -16,7 +18,7 @@ export default async function CategoriasPage() {
       <h1 className="text-xl font-bold">Categorías</h1>
       <Card>
         <h2 className="mb-4 font-bold">Nueva categoría</h2>
-        <NewCategoryForm />
+        <NewCategoryForm workspaceId={workspaceId} />
       </Card>
       <div className="grid gap-2">
         {categories.map((c) => (
@@ -26,6 +28,7 @@ export default async function CategoriasPage() {
             name={c.name}
             color={c.color}
             count={c._count.transactions}
+            workspaceId={workspaceId}
           />
         ))}
         {categories.length === 0 && (

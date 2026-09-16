@@ -9,6 +9,7 @@ import {
   registerSchema,
   type ActionResult,
 } from "@/lib/validations";
+import { allowAttempt } from "@/lib/rate-limit";
 
 const DEFAULT_CATEGORIES = [
   { name: "Comida", color: "#f59e0b" },
@@ -28,6 +29,7 @@ export async function register(
     password: formData.get("password"),
   });
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  if (!allowAttempt(`register:${parsed.data.email}`)) return { ok: false, error: "Demasiados intentos, espera unos minutos" };
 
   const passwordHash = await hash(parsed.data.password, 12);
   try {

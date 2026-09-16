@@ -41,7 +41,11 @@ Abre [http://localhost:3000](http://localhost:3000).
 
 ## Notas
 
-- Multi-moneda sin conversión automática en v1: cada movimiento guarda su moneda y los totales se agrupan por moneda.
+- Cada movimiento conserva su moneda. La moneda principal y las tasas manuales administradas por el usuario consolidan el dashboard; no se consultan APIs externas ni se guardan credenciales. La consolidación omite monedas sin tasa para no mezclar importes incompatibles.
+- PWA: instalable y con fallback básico de shell. La captura offline todavía es local y no se sincroniza automáticamente.
+- Multiusuario: las cuentas personales conviven con workspaces opcionales. Los datos personales tienen `workspaceId = NULL`; solo se comparten mediante migración explícita y transaccional, que conserva categorías y referencias.
+- Workspaces usan `OWNER`, `EDITOR` y `VIEWER`: leer requiere membresía; escribir requiere `EDITOR`; miembros, invitaciones y migración requieren `OWNER`. Las invitaciones normalizan correo, almacenan solo el hash SHA-256 del token, expiran en 7 días y se revocan expirándolas. Sin proveedor de email, la acción devuelve un enlace para copiar.
+- La API de workspace vive en `src/app/actions/workspaces.ts`; la pantalla de aceptación requiere sesión y valida que el correo de la cuenta coincida con la invitación.
 - Si tu red bloquea el puerto 5432 (común en redes corporativas/escolares), usa el flujo `db:diff` → `db:apply` → `db:check`, que habla con Neon por HTTPS (443) mediante `@neondatabase/serverless`.
 - **Fase 1 ✅:** registro/login (NextAuth Credentials + JWT) + CRUD de gastos/ingresos + categorías, verificado E2E contra Neon.
 - El cliente de Prisma se genera en `src/generated/` (ignorado por git).
@@ -51,7 +55,11 @@ Abre [http://localhost:3000](http://localhost:3000).
 - **Fase 1 ✅:** registro/login (NextAuth Credentials + JWT) + CRUD de gastos/ingresos + categorías
 - **Fase 2:** presupuestos por categoría/mes + movimientos recurrentes
 - **Fase 3:** dashboard con gráficas + importar/exportar CSV
-- **Fase 4:** PWA instalable + release público
+- **Fase 4:** PWA instalable + release público (base instalable implementada; iconos, sincronización offline y publicación quedan pendientes)
+
+## Pendientes que requieren decisión o infraestructura
+
+- Elegir proveedor o proceso de actualización para tasas. Actualmente `ExchangeRate` está preparado para tasas introducidas por el usuario, sin credenciales ni llamadas externas.
 
 ## Licencia
 

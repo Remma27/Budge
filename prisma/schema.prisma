@@ -1,5 +1,5 @@
 // Budge v1 — modelo mínimo multi-usuario y multi-moneda.
-// ponytail: sin conversión de moneda en v1; los totales se agrupan por moneda.
+// Las tasas de conversión son manuales y administradas por cada usuario.
 
 generator client {
   provider = "prisma-client"
@@ -29,10 +29,79 @@ model User {
   passwordHash String?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
+  primaryCurrency String        @db.Char(3) @default("MXN")
   categories   Category[]
   transactions Transaction[]
   budgets      Budget[]
   recurring    RecurringRule[]
+  exchangeRates ExchangeRate[]
+  ownedWorkspaces Workspace[]
+  workspaceMemberships WorkspaceMember[]
+  sentInvitations WorkspaceInvitation[] @relation("InvitationSender")
+}
+
+model ExchangeRate {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  from      String   @db.Char(3)
+  to        String   @db.Char(3)
+  rate      Decimal  @db.Decimal(18, 8)
+  updatedAt DateTime @updatedAt
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String?
+
+  @@unique([userId, from, to])
+  @@index([userId, to])
+}
+
+enum WorkspaceRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+model Workspace {
+  id        String            @id @default(cuid())
+  name      String
+  owner     User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId   String
+  members   WorkspaceMember[]
+  invitations WorkspaceInvitation[]
+  createdAt DateTime          @default(now())
+  categories Category[]
+  transactions Transaction[]
+  budgets Budget[]
+  recurring RecurringRule[]
+  exchangeRates ExchangeRate[]
+}
+
+model WorkspaceMember {
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  role        WorkspaceRole @default(VIEWER)
+  createdAt   DateTime       @default(now())
+
+  @@id([workspaceId, userId])
+  @@index([userId])
+}
+
+model WorkspaceInvitation {
+  id          String        @id @default(cuid())
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+  email       String
+  role        WorkspaceRole @default(VIEWER)
+  tokenHash   String        @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  sender      User          @relation("InvitationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  senderId    String
+  createdAt   DateTime      @default(now())
+
+  @@index([email, expiresAt])
 }
 
 model Category {
@@ -45,9 +114,12 @@ model Category {
   transactions Transaction[]
   budgets      Budget[]
   recurring    RecurringRule[]
+  workspace    Workspace?       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId  String?
 
   @@unique([userId, name])
   @@index([userId])
+  @@index([workspaceId])
 }
 
 model Transaction {
@@ -63,8 +135,11 @@ model Transaction {
   categoryId String?
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
+  workspace  Workspace?      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String?
 
   @@index([userId, date])
+  @@index([workspaceId, date])
 }
 
 model Budget {
@@ -78,8 +153,11 @@ model Budget {
   // Mes en formato "YYYY-MM".
   // ponytail: string en vez de fecha para evitar aritmética de meses en v1.
   month      String
+  workspace  Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String?
 
   @@unique([userId, categoryId, month])
+  @@index([workspaceId])
 }
 
 model RecurringRule {
@@ -95,8 +173,23 @@ model RecurringRule {
   isActive   Boolean            @default(true)
   category   Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   categoryId String?
+  recurringRuns RecurringRun[]
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
+  workspace   Workspace?         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String?
 
   @@index([isActive, nextRun])
+  @@index([workspaceId, isActive, nextRun])
+}
+
+model RecurringRun {
+  id            String        @id @default(cuid())
+  rule          RecurringRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  ruleId        String
+  scheduledDate DateTime
+  createdAt     DateTime      @default(now())
+
+  @@unique([ruleId, scheduledDate])
+  @@index([ruleId, scheduledDate])
 }

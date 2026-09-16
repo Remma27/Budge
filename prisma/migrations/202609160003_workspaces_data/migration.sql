@@ -1,0 +1,14 @@
+ALTER TABLE "Category" ADD COLUMN "workspaceId" TEXT;
+ALTER TABLE "Transaction" ADD COLUMN "workspaceId" TEXT;
+ALTER TABLE "Budget" ADD COLUMN "workspaceId" TEXT;
+ALTER TABLE "RecurringRule" ADD COLUMN "workspaceId" TEXT;
+ALTER TABLE "ExchangeRate" ADD COLUMN "workspaceId" TEXT;
+ALTER TABLE "Category" ADD CONSTRAINT "Category_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Budget" ADD CONSTRAINT "Budget_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "RecurringRule" ADD CONSTRAINT "RecurringRule_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ExchangeRate" ADD CONSTRAINT "ExchangeRate_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+CREATE INDEX "Category_workspaceId_idx" ON "Category"("workspaceId");
+CREATE INDEX "Transaction_workspaceId_date_idx" ON "Transaction"("workspaceId", "date");
+CREATE INDEX "Budget_workspaceId_idx" ON "Budget"("workspaceId");
+CREATE INDEX "RecurringRule_workspaceId_isActive_nextRun_idx" ON "RecurringRule"("workspaceId", "isActive", "nextRun");

@@ -10,6 +10,7 @@ import {
   firstError,
   type ActionResult,
 } from "@/lib/validations";
+import { getActionWorkspace, scopeWorkspace } from "@/lib/workspace";
 
 function revalidate() {
   revalidatePath("/categorias");
@@ -21,6 +22,7 @@ export async function createCategory(
   formData: FormData,
 ): Promise<ActionResult> {
   const userId = await requireUserId();
+  const workspaceId = await getActionWorkspace(userId, String(formData.get("workspaceId") || ""));
   const parsed = categorySchema.safeParse({
     name: formData.get("name"),
     color: emptyToUndefined(formData.get("color")) ?? "#6366f1",
@@ -28,7 +30,7 @@ export async function createCategory(
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   try {
     await prisma.category.create({
-      data: { userId, name: parsed.data.name, color: parsed.data.color },
+      data: { userId, workspaceId, name: parsed.data.name, color: parsed.data.color },
     });
   } catch (e) {
     if (
@@ -49,13 +51,14 @@ export async function renameCategory(
   formData: FormData,
 ): Promise<ActionResult> {
   const userId = await requireUserId();
+  const workspaceId = await getActionWorkspace(userId, String(formData.get("workspaceId") || ""));
   const parsed = categorySchema.safeParse({
     name: formData.get("name"),
     color: emptyToUndefined(formData.get("color")) ?? "#6366f1",
   });
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   const existing = await prisma.category.findFirst({
-    where: { id, userId },
+    where: { id, ...scopeWorkspace(userId, workspaceId) },
   });
   if (!existing) return { ok: false, error: "Categoría no encontrada" };
   try {
@@ -76,10 +79,11 @@ export async function renameCategory(
   return { ok: true };
 }
 
-export async function deleteCategory(id: string): Promise<void> {
+export async function deleteCategory(id: string, requestedWorkspaceId?: string): Promise<void> {
   const userId = await requireUserId();
+  const workspaceId = await getActionWorkspace(userId, requestedWorkspaceId);
   const existing = await prisma.category.findFirst({
-    where: { id, userId },
+    where: { id, ...scopeWorkspace(userId, workspaceId) },
   });
   // Los movimientos quedan con "Sin categoría" (onDelete: SetNull).
   if (!existing) return;
