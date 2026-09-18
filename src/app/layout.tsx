@@ -48,9 +48,9 @@ export default async function RootLayout({
                 Budge
               </Link>
               {workspaces.length > 0 && <WorkspaceSelector workspaces={workspaces} />}
-              <details className="group sm:contents">
-                <summary className="cursor-pointer list-none rounded-lg border border-zinc-300 px-3 py-1 text-sm text-zinc-600 sm:hidden dark:border-zinc-700 dark:text-zinc-300">Menú</summary>
-                <div className="absolute left-4 right-4 top-14 z-10 grid gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg sm:static sm:flex sm:items-center sm:gap-4 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none dark:border-zinc-800 dark:bg-zinc-950 sm:dark:bg-transparent">
+              <details className="sm:hidden">
+                <summary className="cursor-pointer list-none rounded-lg border border-zinc-300 px-3 py-1 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">Menú</summary>
+                <div className="absolute left-4 right-4 top-14 z-10 grid gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-800 dark:bg-zinc-950">
                   <Link href="/categorias" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Categorías</Link>
                   <Link href="/presupuestos" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Presupuestos</Link>
                   <Link href="/recurrentes" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Recurrentes</Link>
@@ -61,6 +61,16 @@ export default async function RootLayout({
                   <Link href="/workspace" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Workspace</Link>
                 </div>
               </details>
+              <div className="hidden items-center gap-4 sm:flex">
+                <Link href="/categorias" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Categorías</Link>
+                <Link href="/presupuestos" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Presupuestos</Link>
+                <Link href="/recurrentes" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Recurrentes</Link>
+                <Link href="/moneda" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Moneda</Link>
+                <Link href="/ahorros" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Ahorros</Link>
+                <Link href="/medios-pago" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Pagos</Link>
+                <Link href="/importar" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Importar</Link>
+                <Link href="/workspace" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Workspace</Link>
+              </div>
               <span className="hidden flex-1 sm:block" />
               <span className="hidden text-sm text-zinc-500 sm:inline">
                 {session.user.email}
