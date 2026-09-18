@@ -54,7 +54,6 @@ export default async function RootLayout({
                   <Link href="/moneda" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Moneda</Link>
                   <Link href="/ahorros" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Ahorros</Link>
                   <Link href="/medios-pago" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Pagos</Link>
-                  <Link href="/importar" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Importar</Link>
                 </div>
               </details>
               <div className="hidden items-center gap-4 sm:flex">
@@ -65,7 +64,6 @@ export default async function RootLayout({
                 <Link href="/moneda" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Moneda</Link>
                 <Link href="/ahorros" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Ahorros</Link>
                 <Link href="/medios-pago" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Pagos</Link>
-                <Link href="/importar" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Importar</Link>
               </div>
               <span className="hidden flex-1 sm:block" />
               <span className="hidden text-sm text-zinc-500 sm:inline">
