@@ -82,17 +82,17 @@ export default async function DashboardPage({
 
   return (
     <div className="grid gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Link
           href={`/?mes=${moverMes(mes, -1)}`}
-          className="rounded-lg border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+          className="shrink-0 rounded-lg border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
         >
           ← Anterior
         </Link>
-        <h1 className="text-xl font-bold capitalize">{etiqueta}</h1>
+        <h1 className="text-center text-lg font-bold capitalize sm:text-xl">{etiqueta}</h1>
         <Link
           href={`/?mes=${moverMes(mes, 1)}`}
-          className="rounded-lg border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+          className="shrink-0 rounded-lg border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
         >
           Siguiente →
         </Link>
@@ -177,7 +177,7 @@ export default async function DashboardPage({
         {visibleTxs.map((t) => (
           <div
             key={t.id}
-            className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950"
+            className="flex min-w-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-3 sm:gap-3 sm:px-4 dark:border-zinc-800 dark:bg-zinc-950"
           >
             <span
               className="h-3 w-3 shrink-0 rounded-full"
@@ -194,14 +194,14 @@ export default async function DashboardPage({
               </p>
             </div>
             <p
-              className={`text-sm font-bold ${t.type === "INCOME" ? "text-green-600" : "text-red-600"}`}
+              className={`shrink-0 text-right text-sm font-bold ${t.type === "INCOME" ? "text-green-600" : "text-red-600"}`}
             >
               {t.type === "INCOME" ? "+" : "−"}
               {formatMoney(t.amount, t.currency)}
             </p>
             <Link
                href={`/transacciones/${t.id}/editar${workspaceId ? `?workspaceId=${workspaceId}` : ""}`}
-              className="text-sm text-zinc-500 underline underline-offset-4"
+               className="shrink-0 text-sm text-zinc-500 underline underline-offset-4"
             >
               Editar
             </Link>

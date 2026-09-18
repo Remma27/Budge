@@ -76,7 +76,7 @@ export function TransactionForm({
     }}>
       <input type="hidden" name="workspaceId" value={workspaceId ?? ""} /><FormError message={state.ok ? null : state.error} />
       {offline && <p className="text-sm text-amber-600">Guardado sin conexión. Se sincronizará automáticamente.</p>}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label className={labelCls} htmlFor="type">
             Tipo
@@ -107,7 +107,7 @@ export function TransactionForm({
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label className={labelCls} htmlFor="currency">
             Moneda
