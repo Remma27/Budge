@@ -48,6 +48,7 @@ export default async function RootLayout({
                 <summary className="cursor-pointer list-none rounded-lg border border-zinc-300 px-3 py-1 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">Menú</summary>
                 <div className="absolute left-4 right-4 top-14 z-10 grid gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-800 dark:bg-zinc-950">
                   <Link href="/categorias" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Categorías</Link>
+                  <Link href="/calendario" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Calendario</Link>
                   <Link href="/presupuestos" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Presupuestos</Link>
                   <Link href="/recurrentes" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Recurrentes</Link>
                   <Link href="/moneda" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Moneda</Link>
@@ -58,6 +59,7 @@ export default async function RootLayout({
               </details>
               <div className="hidden items-center gap-4 sm:flex">
                 <Link href="/categorias" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Categorías</Link>
+                <Link href="/calendario" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Calendario</Link>
                 <Link href="/presupuestos" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Presupuestos</Link>
                 <Link href="/recurrentes" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Recurrentes</Link>
                 <Link href="/moneda" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Moneda</Link>
@@ -73,7 +75,7 @@ export default async function RootLayout({
             </nav>
           </header>
         )}
-        <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
           {children}
         </main>
       </body>
