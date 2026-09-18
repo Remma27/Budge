@@ -10,6 +10,35 @@ export async function createWorkspace(name: string) {
   if (!name.trim()) throw new Error("El nombre es obligatorio");
   return prisma.workspace.create({ data: { name: name.trim(), ownerId: userId, members: { create: { userId, role: WorkspaceRole.OWNER } } } });
 }
+export async function deleteWorkspace(workspaceId: string) {
+  const userId = await requireUserId();
+  const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { ownerId: true } });
+  if (!workspace || workspace.ownerId !== userId) throw new Error("No tienes permiso para eliminar este workspace");
+  await prisma.workspace.delete({ where: { id: workspaceId } });
+  revalidatePath("/");
+  revalidatePath("/workspace");
+}
+export async function updateWorkspaceMember(workspaceId: string, memberId: string, role: WorkspaceRole) {
+  const userId = await requireUserId();
+  await requireWorkspaceRole(userId, workspaceId, WorkspaceRole.OWNER);
+  if (role === WorkspaceRole.OWNER) throw new Error("No puedes asignar otro propietario desde aquí");
+  await prisma.workspaceMember.updateMany({ where: { workspaceId, userId: memberId, role: { not: WorkspaceRole.OWNER } }, data: { role } });
+  revalidatePath("/workspace");
+}
+export async function removeWorkspaceMember(workspaceId: string, memberId: string) {
+  const userId = await requireUserId();
+  await requireWorkspaceRole(userId, workspaceId, WorkspaceRole.OWNER);
+  await prisma.workspaceMember.deleteMany({ where: { workspaceId, userId: memberId, role: { not: WorkspaceRole.OWNER } } });
+  revalidatePath("/workspace");
+}
+export async function leaveWorkspace(workspaceId: string) {
+  const userId = await requireUserId();
+  const member = await prisma.workspaceMember.findUnique({ where: { workspaceId_userId: { workspaceId, userId } }, select: { role: true } });
+  if (!member || member.role === WorkspaceRole.OWNER) throw new Error("El propietario no puede abandonar el workspace");
+  await prisma.workspaceMember.delete({ where: { workspaceId_userId: { workspaceId, userId } } });
+  revalidatePath("/");
+  revalidatePath("/workspace");
+}
 export async function createInvitation(workspaceId: string, email: string, role: WorkspaceRole = WorkspaceRole.VIEWER) {
   const senderId = await requireUserId(); await requireWorkspaceRole(senderId, workspaceId, WorkspaceRole.OWNER);
   const normalized = normalizeEmail(email); if (!normalized || role === WorkspaceRole.OWNER) throw new Error("Invitación inválida");

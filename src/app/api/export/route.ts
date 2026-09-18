@@ -5,11 +5,13 @@ import { getWorkspaceContext, scopeWorkspace } from "@/lib/workspace";
 
 export async function GET(request: Request) {
   const userId = await requireUserId();
-  const workspaceId = new URL(request.url).searchParams.get("workspaceId");
+  const params = new URL(request.url).searchParams;
+  const workspaceId = params.get("workspaceId");
   const { workspaceId: selected } = await getWorkspaceContext(userId, workspaceId);
   const scope = scopeWorkspace(userId, selected);
-  const rows = await prisma.transaction.findMany({ where: scope, include: { category: true }, orderBy: { date: "asc" } });
-  if (new URL(request.url).searchParams.get("format") === "backup") {
+  const type = params.get("tipo");
+  const rows = await prisma.transaction.findMany({ where: { ...scope, ...(params.get("moneda") && { currency: params.get("moneda")!.toUpperCase() }), ...(type === "INCOME" || type === "EXPENSE" ? { type } : {}), ...(params.get("categoria") && { categoryId: params.get("categoria")! }), ...(params.get("q") && { OR: [{ note: { contains: params.get("q")!, mode: "insensitive" } }, { category: { name: { contains: params.get("q")!, mode: "insensitive" } } }] }) }, include: { category: true }, orderBy: { date: "asc" } });
+  if (params.get("format") === "backup") {
     const [categories, budgets, recurring] = await Promise.all([prisma.category.findMany({ where: scope }), prisma.budget.findMany({ where: scope }), prisma.recurringRule.findMany({ where: scope })]);
     return NextResponse.json({ version: 1, exportedAt: new Date().toISOString(), categories, transactions: rows, budgets, recurring });
   }
