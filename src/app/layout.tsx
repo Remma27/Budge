@@ -5,8 +5,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { authOptions } from "@/lib/auth";
 import { SignOutButton } from "@/components/sign-out-button";
 import { PwaRegister } from "@/components/pwa-register";
-import { prisma } from "@/lib/prisma";
-import { WorkspaceSelector } from "@/components/workspace-selector";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,7 +30,6 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const session = await getServerSession(authOptions);
-  const workspaces = session?.user ? await prisma.workspace.findMany({ where: { OR: [{ ownerId: session.user.id }, { members: { some: { userId: session.user.id } } }] }, select: { id: true, name: true }, orderBy: { name: "asc" } }) : [];
 
   return (
     <html
@@ -47,7 +44,6 @@ export default async function RootLayout({
               <Link href="/" className="font-bold">
                 Budge
               </Link>
-              {workspaces.length > 0 && <WorkspaceSelector workspaces={workspaces} />}
               <details className="sm:hidden">
                 <summary className="cursor-pointer list-none rounded-lg border border-zinc-300 px-3 py-1 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">Menú</summary>
                 <div className="absolute left-4 right-4 top-14 z-10 grid gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-800 dark:bg-zinc-950">
@@ -58,7 +54,6 @@ export default async function RootLayout({
                   <Link href="/ahorros" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Ahorros</Link>
                   <Link href="/medios-pago" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Pagos</Link>
                   <Link href="/importar" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Importar</Link>
-                  <Link href="/workspace" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Workspace</Link>
                 </div>
               </details>
               <div className="hidden items-center gap-4 sm:flex">
@@ -69,7 +64,6 @@ export default async function RootLayout({
                 <Link href="/ahorros" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Ahorros</Link>
                 <Link href="/medios-pago" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Pagos</Link>
                 <Link href="/importar" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Importar</Link>
-                <Link href="/workspace" className="text-sm text-zinc-600 hover:underline dark:text-zinc-300">Workspace</Link>
               </div>
               <span className="hidden flex-1 sm:block" />
               <span className="hidden text-sm text-zinc-500 sm:inline">
