@@ -41,8 +41,8 @@ Abre [http://localhost:3000](http://localhost:3000).
 
 ## Notas
 
-- Cada movimiento conserva su moneda. La moneda principal y las tasas manuales administradas por el usuario consolidan el dashboard; no se consultan APIs externas ni se guardan credenciales. La consolidación omite monedas sin tasa para no mezclar importes incompatibles.
-- PWA: instalable y con fallback básico de shell. La captura offline todavía es local y no se sincroniza automáticamente.
+- Cada movimiento conserva su moneda. El dashboard consulta automáticamente tasas diarias de Frankfurter, sin API key; si el proveedor no responde, usa tasas guardadas como respaldo y omite monedas sin tasa para no mezclar importes incompatibles.
+- PWA: instalable, con manifest, service worker, fallback básico de shell y cola local de movimientos. La sincronización ocurre al recuperar conexión y abrir la app; no se procesan cambios offline de edición o borrado.
 - Multiusuario: las cuentas personales conviven con workspaces opcionales. Los datos personales tienen `workspaceId = NULL`; solo se comparten mediante migración explícita y transaccional, que conserva categorías y referencias.
 - Workspaces usan `OWNER`, `EDITOR` y `VIEWER`: leer requiere membresía; escribir requiere `EDITOR`; miembros, invitaciones y migración requieren `OWNER`. Las invitaciones normalizan correo, almacenan solo el hash SHA-256 del token, expiran en 7 días y se revocan expirándolas. Sin proveedor de email, la acción devuelve un enlace para copiar.
 - La API de workspace vive en `src/app/actions/workspaces.ts`; la pantalla de aceptación requiere sesión y valida que el correo de la cuenta coincida con la invitación.
@@ -53,13 +53,16 @@ Abre [http://localhost:3000](http://localhost:3000).
 ## Roadmap
 
 - **Fase 1 ✅:** registro/login (NextAuth Credentials + JWT) + CRUD de gastos/ingresos + categorías
-- **Fase 2:** presupuestos por categoría/mes + movimientos recurrentes
-- **Fase 3:** dashboard con gráficas + importar/exportar CSV
-- **Fase 4:** PWA instalable + release público (base instalable implementada; iconos, sincronización offline y publicación quedan pendientes)
+- **Fase 2 ✅:** presupuestos por categoría/mes + movimientos recurrentes
+- **Fase 3 ✅:** dashboard con gráficas + importar/exportar CSV
+- **Fase 4 🟡:** PWA instalable y sincronización básica de movimientos implementadas; quedan pruebas de instalación/offline, despliegue público y operación.
 
 ## Pendientes que requieren decisión o infraestructura
 
-- Elegir proveedor o proceso de actualización para tasas. Actualmente `ExchangeRate` está preparado para tasas introducidas por el usuario, sin credenciales ni llamadas externas.
+- Configurar `RESEND_API_KEY`, `RESEND_FROM_EMAIL` y `NEXTAUTH_URL` en el entorno de despliegue para habilitar recuperación de contraseña por correo. Sin esas credenciales, la interfaz mantiene una respuesta genérica y el flujo no envía mensajes.
+- Las tasas de cambio se obtienen automáticamente desde Frankfurter (`api.frankfurter.dev`), sin credenciales ni coste. Las tasas guardadas solo funcionan como respaldo cuando el proveedor no está disponible.
+
+Antes de publicar, ejecutar `pnpm lint`, `pnpm build` y `pnpm db:check`. Si se añade una migración y la red bloquea PostgreSQL, aplicarla con `pnpm db:apply -- <nombre-de-migracion>`.
 
 ## Licencia
 

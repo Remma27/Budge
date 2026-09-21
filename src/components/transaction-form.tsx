@@ -71,7 +71,7 @@ export function TransactionForm({
     <form key={formKey} action={formAction} className="grid gap-3" onSubmit={(event) => {
       if (navigator.onLine) return;
       event.preventDefault(); const fd = new FormData(event.currentTarget); const id = crypto.randomUUID();
-       void enqueue({ id, type: String(fd.get("type")), amount: String(fd.get("amount")), currency: String(fd.get("currency")), date: String(fd.get("date")), note: String(fd.get("note") || ""), categoryId: String(fd.get("categoryId") || ""), paymentMethodId: String(fd.get("paymentMethodId") || "") });
+       void enqueue({ id, type: String(fd.get("type")), amount: String(fd.get("amount")), currency: String(fd.get("currency")), date: String(fd.get("date")), note: String(fd.get("note") || ""), categoryId: String(fd.get("categoryId") || ""), paymentMethodId: String(fd.get("paymentMethodId") || ""), workspaceId: String(fd.get("workspaceId") || "") });
       setOffline(true); setFormKey((key) => key + 1);
     }}>
       <input type="hidden" name="workspaceId" value={workspaceId ?? ""} /><FormError message={state.ok ? null : state.error} />
@@ -186,7 +186,7 @@ export function TransactionForm({
   );
 }
 
-type Queued = { id: string; type: string; amount: string; currency: string; date: string; note: string; categoryId: string; paymentMethodId: string };
+type Queued = { id: string; type: string; amount: string; currency: string; date: string; note: string; categoryId: string; paymentMethodId: string; workspaceId: string };
 function openQueue() { return new Promise<IDBDatabase>((resolve, reject) => { const request = indexedDB.open("budge-offline", 1); request.onupgradeneeded = () => request.result.createObjectStore("queue", { keyPath: "id" }); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); }
 async function enqueue(row: Queued) {
   const db = await openQueue(); db.transaction("queue", "readwrite").objectStore("queue").put(row);

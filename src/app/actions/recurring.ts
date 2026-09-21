@@ -15,7 +15,9 @@ export async function createRecurring(_p: ActionResult, f: FormData): Promise<Ac
    const chargeDay = f.get("chargeDay") ? Number(f.get("chargeDay")) : null;
    if (chargeDay !== null && !recurringChargeDaySchema.safeParse(chargeDay).success) return { ok: false, error: "Día de cobro inválido" };
   if (p.data.categoryId && !(await prisma.category.findFirst({ where: { id: p.data.categoryId, ...scopeWorkspace(userId, workspaceId) } }))) return { ok: false, error: "Categoría inválida" };
-   await prisma.recurringRule.create({ data: { userId, workspaceId, ...p.data, kind: f.get("kind") === "MEMBERSHIP" ? "MEMBERSHIP" : "SERVICE", provider: emptyToUndefined(f.get("provider")) ?? null, chargeDay, nextRun: parseFechaLocal(p.data.nextRun), note: p.data.note ?? null, categoryId: p.data.categoryId ?? null } });
+   const paymentMethodId = emptyToUndefined(f.get("paymentMethodId"));
+   if (paymentMethodId && !(await prisma.paymentMethod.findFirst({ where: { id: paymentMethodId, ...scopeWorkspace(userId, workspaceId) } }))) return { ok: false, error: "Medio de pago inválido" };
+     await prisma.recurringRule.create({ data: { userId, workspaceId, ...p.data, kind: f.get("kind") === "MEMBERSHIP" ? "MEMBERSHIP" : "SERVICE", provider: emptyToUndefined(f.get("provider")) ?? null, paymentMethodId: paymentMethodId ?? null, chargeDay, nextRun: parseFechaLocal(p.data.nextRun), note: p.data.note ?? null, categoryId: p.data.categoryId ?? null } });
   revalidatePath("/recurrentes");
   return { ok: true };
 }
@@ -28,7 +30,9 @@ export async function updateRecurring(id: string, _p: ActionResult, f: FormData)
    const chargeDay = f.get("chargeDay") ? Number(f.get("chargeDay")) : null;
    if (chargeDay !== null && !recurringChargeDaySchema.safeParse(chargeDay).success) return { ok: false, error: "Día de cobro inválido" };
   if (p.data.categoryId && !(await prisma.category.findFirst({ where: { id: p.data.categoryId, ...scopeWorkspace(userId, workspaceId) } }))) return { ok: false, error: "Categoría inválida" };
-   await prisma.recurringRule.updateMany({ where: { id, ...scopeWorkspace(userId, workspaceId) }, data: { ...p.data, kind: f.get("kind") === "MEMBERSHIP" ? "MEMBERSHIP" : "SERVICE", provider: emptyToUndefined(f.get("provider")) ?? null, chargeDay, nextRun: parseFechaLocal(p.data.nextRun), note: p.data.note ?? null, categoryId: p.data.categoryId ?? null } });
+   const paymentMethodId = emptyToUndefined(f.get("paymentMethodId"));
+   if (paymentMethodId && !(await prisma.paymentMethod.findFirst({ where: { id: paymentMethodId, ...scopeWorkspace(userId, workspaceId) } }))) return { ok: false, error: "Medio de pago inválido" };
+     await prisma.recurringRule.updateMany({ where: { id, ...scopeWorkspace(userId, workspaceId) }, data: { ...p.data, kind: f.get("kind") === "MEMBERSHIP" ? "MEMBERSHIP" : "SERVICE", provider: emptyToUndefined(f.get("provider")) ?? null, paymentMethodId: paymentMethodId ?? null, chargeDay, nextRun: parseFechaLocal(p.data.nextRun), note: p.data.note ?? null, categoryId: p.data.categoryId ?? null } });
   revalidatePath("/recurrentes"); return { ok: true };
 }
 

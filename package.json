@@ -8,14 +8,15 @@
     "build": "next build",
     "start": "next start",
     "postinstall": "prisma generate",
-    "postinstall": "prisma generate",
     "lint": "eslint",
     "db:migrate": "prisma migrate dev",
     "db:diff": "prisma migrate diff --from-migrations ./prisma/migrations --to-schema ./prisma/schema.prisma --script",
     "db:apply": "node scripts/apply-sql.mjs",
     "db:check": "node scripts/db-check.mjs",
     "db:generate": "prisma generate",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
@@ -38,7 +39,9 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "prisma": "7.10.0",
+    "@vitest/coverage-v8": "^3.2.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

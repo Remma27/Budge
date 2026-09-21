@@ -1,0 +1,6 @@
+CREATE TYPE "SavingsFrequency" AS ENUM ('DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY');
+CREATE TYPE "BudgetMode" AS ENUM ('FIXED', 'PERCENTAGE');
+ALTER TABLE "SavingsGoal" ADD COLUMN "frequency" "SavingsFrequency";
+ALTER TABLE "Budget" ADD COLUMN "mode" "BudgetMode" NOT NULL DEFAULT 'FIXED';
+ALTER TABLE "Budget" ADD COLUMN "percentage" DECIMAL(5,2);
+ALTER TABLE "Budget" ALTER COLUMN "month" DROP NOT NULL;

@@ -22,6 +22,11 @@ export const metadata: Metadata = {
   description:
     "App web open-source y gratuita para trackear gastos personales.",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/icon-192.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icon-192.svg", type: "image/svg+xml" }],
+  },
+  appleWebApp: { capable: true, title: "Budge", statusBarStyle: "default" },
 };
 
 export default async function RootLayout({

@@ -3,7 +3,12 @@ import { prisma } from "@/lib/prisma";
 function advance(date: Date, frequency: string) {
   const next = new Date(date);
   if (frequency === "WEEKLY") next.setDate(next.getDate() + 7);
-  else if (frequency === "MONTHLY") next.setMonth(next.getMonth() + 1);
+  else if (frequency === "MONTHLY") {
+    const day = next.getDate();
+    next.setDate(1);
+    next.setMonth(next.getMonth() + 1);
+    next.setDate(Math.min(day, new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()));
+  }
   else next.setFullYear(next.getFullYear() + 1);
   return next;
 }
@@ -17,7 +22,7 @@ export async function generateDueRecurring(userId?: string, workspaceId?: string
     while (next <= now) {
       const run = await prisma.recurringRun.createMany({ data: [{ ruleId: rule.id, scheduledDate: next }], skipDuplicates: true });
       if (run.count > 0) {
-        await prisma.transaction.create({ data: { userId: rule.userId, workspaceId: rule.workspaceId, type: rule.type, amount: rule.amount, currency: rule.currency, date: next, note: rule.note, categoryId: rule.categoryId } });
+        await prisma.transaction.create({ data: { userId: rule.userId, workspaceId: rule.workspaceId, type: rule.type, amount: rule.amount, currency: rule.currency, date: next, note: rule.note, categoryId: rule.categoryId, paymentMethodId: rule.paymentMethodId } });
         generated++;
       }
       next = advance(next, rule.frequency);

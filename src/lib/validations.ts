@@ -20,6 +20,8 @@ export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().max(254).refine((v) => EMAIL_RE.test(v)),
   password: z.string().min(1).max(128),
 });
+export const forgotPasswordSchema = z.object({ email: z.string().trim().toLowerCase().max(254).refine((v) => EMAIL_RE.test(v)) });
+export const resetPasswordSchema = z.object({ token: z.string().min(32), password: z.string().min(8).max(128) });
 
 export const categorySchema = z.object({
   name: z.string().trim().min(1).max(60),
@@ -56,7 +58,7 @@ export const budgetSchema = z.object({
   categoryId: z.string().trim().min(1),
   amount: z.string().trim().regex(/^\d{1,10}(\.\d{1,2})?$/).refine((v) => Number(v) > 0),
   currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/).default("MXN"),
-  month: z.string().trim().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+  month: z.string().trim().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional(),
 });
 
 export const recurringSchema = z.object({
@@ -105,4 +107,4 @@ export function emptyToUndefined(
   return t === "" ? undefined : t;
 }
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+export type ActionResult = { ok: true; message?: string } | { ok: false; error: string };
