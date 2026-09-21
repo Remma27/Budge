@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { authOptions } from "@/lib/auth";
 import { SignOutButton } from "@/components/sign-out-button";
 import { PwaRegister } from "@/components/pwa-register";
@@ -43,6 +44,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <PwaRegister />
+        <Analytics />
         {session?.user && (
           <header className="border-b border-zinc-200 dark:border-zinc-800">
             <nav className="relative mx-auto flex w-full max-w-3xl flex-wrap items-center gap-2 px-4 py-3 sm:flex-nowrap sm:gap-4">
