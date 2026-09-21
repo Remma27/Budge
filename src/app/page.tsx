@@ -22,6 +22,7 @@ import { DeleteButton } from "@/components/delete-button";
 import { getWorkspaceContext, scopeWorkspace } from "@/lib/workspace";
 import { generateDueRecurring } from "@/lib/recurring";
 import { fetchExchangeRate } from "@/lib/exchange-rates";
+import { findBudgets } from "@/lib/budgets";
 
 function nextPaymentDate(month: string, day: number | null) {
   if (!day) return null;
@@ -60,7 +61,7 @@ export default async function DashboardPage({
        include: { category: { select: { id: true, name: true, color: true } }, paymentMethod: { select: { id: true, name: true, type: true } } },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     }),
-    prisma.budget.findMany({ where: { ...scope, month: mes }, include: { category: true }, orderBy: { category: { name: "asc" } } }),
+     findBudgets(userId, workspaceId).then(rows => rows.filter(row => row.month === mes)),
      workspaceId ? prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId }, select: { primaryCurrency: true } }) : prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { primaryCurrency: true } }),
     prisma.exchangeRate.findMany({ where: { userId }, select: { from: true, to: true, rate: true } }),
   ]);
