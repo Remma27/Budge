@@ -1,5 +1,7 @@
 @import "tailwindcss";
-@custom-variant dark (&:where(.dark, .dark *));
+/* Sin @custom-variant: dark: responde al tema del sistema (prefers-color-scheme).
+   Si un día se quiere toggle manual, re-añadir
+   `@custom-variant dark (&:where(.dark, .dark *));`. */
 
 :root {
   --background: #ffffff;

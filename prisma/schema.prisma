@@ -48,6 +48,8 @@ model User {
   name         String?
   // Hash bcrypt de la contraseña (login con Credentials + sesiones JWT, sin tablas extra).
   passwordHash String?
+  // Se actualiza al restablecer la contraseña; invalida los JWT emitidos antes.
+  passwordChangedAt DateTime?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   primaryCurrency String        @db.Char(3) @default("CRC")
@@ -62,6 +64,15 @@ model User {
   passwordResetTokens PasswordResetToken[]
   savings SavingsGoal[]
   paymentMethods PaymentMethod[]
+}
+
+// Ventanas de rate limiting (una fila por clave; se reutiliza al expirar).
+model RateLimit {
+  key     String   @id
+  count   Int      @default(1)
+  resetAt DateTime
+
+  @@index([resetAt])
 }
 
 model PasswordResetToken {

@@ -3,13 +3,14 @@
 import { hash } from "bcryptjs";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { isPasswordBreached } from "@/lib/auth";
 import {
   emptyToUndefined,
   firstError,
   registerSchema,
   type ActionResult,
 } from "@/lib/validations";
-import { allowAttempt } from "@/lib/rate-limit";
+import { allowAttempt, clientIp } from "@/lib/rate-limit";
 
 const DEFAULT_CATEGORIES = [
   { name: "Comida", color: "#f59e0b" },
@@ -29,7 +30,12 @@ export async function register(
     password: formData.get("password"),
   });
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
-  if (!allowAttempt(`register:${parsed.data.email}`)) return { ok: false, error: "Demasiados intentos, espera unos minutos" };
+  if (!(await allowAttempt(`register:${await clientIp()}:${parsed.data.email}`, 5, 60 * 60_000))) {
+    return { ok: false, error: "Demasiados intentos, espera una hora" };
+  }
+  if (await isPasswordBreached(parsed.data.password)) {
+    return { ok: false, error: "Esa contraseña apareció en filtraciones, usa otra diferente" };
+  }
 
   const passwordHash = await hash(parsed.data.password, 12);
   try {

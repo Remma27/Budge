@@ -58,7 +58,7 @@ beforeEach(() => {
   prisma.paymentMethod.updateMany.mockResolvedValue({ count: 1 });
   prisma.budget.findFirst.mockResolvedValue({ id: "budget-1" });
   prisma.savingsGoal.findFirst.mockResolvedValue({ id: "goal-1" });
-  prisma.transaction.findFirst.mockResolvedValue({ id: "tx-1", userId: "user-1", workspaceId: null });
+  prisma.transaction.findFirst.mockResolvedValue({ id: "tx-1", userId: "user-1", workspaceId: null, type: "EXPENSE", amount: { toString: () => "20" }, currency: "CRC", date: new Date("2026-09-21T12:00:00"), note: null, categoryId: null, paymentMethodId: null });
   prisma.recurringRule.findFirst.mockResolvedValue({ id: "rule-1", isActive: true });
   prisma.recurringRule.updateMany.mockResolvedValue({ count: 1 });
   prisma.$transaction.mockResolvedValue([]);
@@ -327,15 +327,15 @@ describe("remaining financial actions", () => {
     expect((await updateTransaction("missing", { ok: true }, form({ type: "EXPENSE", amount: "20", date: "2026-10-01" }))).ok).toBe(false);
     prisma.recurringRule.findFirst.mockResolvedValue(null);
     await toggleRecurring("missing");
-    prisma.transaction.findFirst.mockResolvedValue({ id: "tx-1", userId: "user-1", workspaceId: null });
+    prisma.transaction.findFirst.mockResolvedValue({ id: "tx-1", userId: "user-1", workspaceId: null, type: "EXPENSE", amount: { toString: () => "20" }, currency: "CRC", date: new Date("2026-09-21T12:00:00"), note: null, categoryId: null, paymentMethodId: null });
     prisma.category.findFirst.mockResolvedValue(null);
     expect(await updateTransaction("tx-1", { ok: true }, form({ type: "EXPENSE", amount: "20", date: "2026-10-01", categoryId: "bad" }))).toEqual({ ok: false, error: "Categoría inválida" });
-    prisma.transaction.findFirst.mockResolvedValue({ id: "tx-1", userId: "user-1", workspaceId: null });
+    prisma.transaction.findFirst.mockResolvedValue({ id: "tx-1", userId: "user-1", workspaceId: null, type: "EXPENSE", amount: { toString: () => "20" }, currency: "CRC", date: new Date("2026-09-21T12:00:00"), note: null, categoryId: null, paymentMethodId: null });
     prisma.category.findFirst.mockResolvedValue({ id: "cat-1" });
     prisma.paymentMethod.findFirst.mockResolvedValue(null);
     expect(await updateTransaction("tx-1", { ok: true }, form({ type: "EXPENSE", amount: "20", date: "2026-10-01", paymentMethodId: "bad" }))).toEqual({ ok: false, error: "Medio de pago inválido" });
     prisma.paymentMethod.findFirst.mockResolvedValue({ id: "pay-1" });
-    prisma.transaction.findFirst.mockResolvedValue({ id: "tx-1", userId: "user-1", workspaceId: "ws-1" });
+    prisma.transaction.findFirst.mockResolvedValue({ id: "tx-1", userId: "user-1", workspaceId: "ws-1", type: "EXPENSE", amount: { toString: () => "20" }, currency: "CRC", date: new Date("2026-09-21T12:00:00"), note: null, categoryId: null, paymentMethodId: null });
     await deleteTransaction("tx-1");
     prisma.paymentMethod.findFirst.mockResolvedValue(null);
     expect(await importTransactions([{ type: "INCOME", amount: "50", currency: "CRC", date: "2026-09-21", paymentMethodId: "bad" }])).toEqual({ ok: false, error: "Medio de pago inválido" });

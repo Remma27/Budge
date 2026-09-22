@@ -2,6 +2,8 @@
 import { createHash, randomBytes } from "node:crypto";
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { isPasswordBreached } from "@/lib/auth";
+import { allowAttempt, clientIp } from "@/lib/rate-limit";
 import { forgotPasswordSchema, resetPasswordSchema, type ActionResult } from "@/lib/validations";
 
 const message = "Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.";
@@ -10,6 +12,9 @@ const digest = (value: string) => createHash("sha256").update(value).digest("hex
 export async function requestPasswordReset(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const parsed = forgotPasswordSchema.safeParse({ email: formData.get("email") });
   if (!parsed.success) return { ok: false, error: "Introduce un correo válido" };
+  if (!(await allowAttempt(`reset:${await clientIp()}:${parsed.data.email}`, 3, 60 * 60_000))) {
+    return { ok: false, error: "Demasiados intentos, espera una hora" };
+  }
   const user = await prisma.user.findUnique({ where: { email: parsed.data.email }, select: { id: true, email: true } });
   if (!user) return { ok: true, message };
    if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL || !process.env.NEXTAUTH_URL) {
@@ -29,8 +34,9 @@ export async function requestPasswordReset(_prev: ActionResult, formData: FormDa
 export async function resetPassword(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const parsed = resetPasswordSchema.safeParse({ token: formData.get("token"), password: formData.get("password") });
   if (!parsed.success) return { ok: false, error: "La contraseña debe tener al menos 8 caracteres" };
+  if (await isPasswordBreached(parsed.data.password)) return { ok: false, error: "Esa contraseña apareció en filtraciones, usa otra diferente" };
   const token = await prisma.passwordResetToken.findUnique({ where: { tokenHash: digest(parsed.data.token) } });
   if (!token || token.usedAt || token.expiresAt < new Date()) return { ok: false, error: "El enlace es inválido o expiró" };
-  await prisma.$transaction([prisma.user.update({ where: { id: token.userId }, data: { passwordHash: await hash(parsed.data.password, 12) } }), prisma.passwordResetToken.update({ where: { id: token.id }, data: { usedAt: new Date() } })]);
+  await prisma.$transaction([prisma.user.update({ where: { id: token.userId }, data: { passwordHash: await hash(parsed.data.password, 12), passwordChangedAt: new Date() } }), prisma.passwordResetToken.update({ where: { id: token.id }, data: { usedAt: new Date() } })]);
   return { ok: true, message: "Contraseña actualizada. Ya puedes iniciar sesión." };
 }

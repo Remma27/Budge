@@ -16,9 +16,8 @@ import {
 } from "@/components/transaction-form";
 import {
   createTransaction,
-  deleteTransaction,
 } from "@/app/actions/transactions";
-import { DeleteButton } from "@/components/delete-button";
+import { DeleteTransactionButton } from "@/components/delete-button";
 import { getWorkspaceContext, scopeWorkspace } from "@/lib/workspace";
 import { generateDueRecurring } from "@/lib/recurring";
 import { fetchExchangeRate } from "@/lib/exchange-rates";
@@ -43,6 +42,20 @@ export default async function DashboardPage({
   const q = params?.q?.trim() || "";
   const pagina = Math.max(1, Number(params?.pagina) || 1);
   const { inicio, fin, etiqueta } = rangoMes(mes);
+
+  // Conserva workspace y filtros al navegar de mes o de página.
+  function qs(next: { mes?: string; pagina?: number }): string {
+    const sp = new URLSearchParams();
+    sp.set("mes", next.mes ?? mes);
+    if (moneda) sp.set("moneda", moneda);
+    if (categoria) sp.set("categoria", categoria);
+    if (tipo) sp.set("tipo", tipo);
+    if (q) sp.set("q", q);
+    if (workspaceId) sp.set("workspaceId", workspaceId);
+    const p = next.pagina ?? pagina;
+    if (p > 1) sp.set("pagina", String(p));
+    return `/?${sp.toString()}`;
+  }
 
   const [categories, paymentMethods, txs, budgets, user, rates, periodTransactions] = await Promise.all([
     prisma.category.findMany({
@@ -107,14 +120,14 @@ export default async function DashboardPage({
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 p-4"><p className="text-sm">¿Ya recibiste tu salario?</p><Link className="text-sm font-semibold text-indigo-700 underline underline-offset-4" href={`/ingresos?mes=${mes}${workspaceId ? `&workspaceId=${encodeURIComponent(workspaceId)}` : ""}`}>Registrar salario o ingreso</Link></div>
       <div className="flex items-center justify-between gap-2">
         <Link
-          href={`/?mes=${moverMes(mes, -1)}`}
+          href={qs({ mes: moverMes(mes, -1), pagina: 1 })}
           className="shrink-0 rounded-lg border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
         >
           ← Anterior
         </Link>
         <h1 className="text-center text-lg font-bold capitalize sm:text-xl">{etiqueta}</h1>
         <Link
-          href={`/?mes=${moverMes(mes, 1)}`}
+          href={qs({ mes: moverMes(mes, 1), pagina: 1 })}
           className="shrink-0 rounded-lg border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
         >
           Siguiente →
@@ -132,7 +145,7 @@ export default async function DashboardPage({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card><h2 className="mb-4 font-bold">Gastos por categoría</h2><div className="grid gap-3 text-sm">{[...categoryTotals.entries()].map(([name, total]) => <div key={name}><div className="flex justify-between"><span>{name}</span><span>{formatMoney(total, user.primaryCurrency)}</span></div><div className="mt-1 h-2 rounded bg-zinc-200 dark:bg-zinc-800"><div className="h-2 rounded bg-indigo-500" style={{ width: `${total / maxCategory * 100}%` }} /></div></div>)}{categoryTotals.size === 0 && <p className="text-zinc-500">Aún no hay gastos categorizados.</p>}</div></Card>
-         <Card><h2 className="mb-4 font-bold">Evolución mensual</h2><div className="flex h-40 items-end gap-2 border-b border-zinc-200 pb-5 dark:border-zinc-800">{trend.map(t => <div key={t.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1"><span className="text-[10px] text-zinc-600">{formatMoney(t.total, t.currency)}</span><div className="w-full rounded-t bg-emerald-500 transition-all" style={{ height: `${Math.max(8, t.total / Math.max(...trend.map(x => x.total), 1) * 120)}px` }} /><span className="text-xs text-zinc-500">{t.month}</span></div>)}</div><p className="mt-2 text-xs text-zinc-500">Gastos convertidos a {primaryCurrency}. Las barras vacías representan meses sin gastos.</p></Card>
+         <Card><h2 className="mb-4 font-bold">Evolución mensual</h2><div className="flex h-40 items-end gap-2 border-b border-zinc-200 pb-5 dark:border-zinc-800">{trend.map(t => <div key={t.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1"><span className="text-xs text-zinc-600 dark:text-zinc-400">{formatMoney(t.total, t.currency)}</span><div className="w-full rounded-t bg-emerald-500 transition-all" style={{ height: `${Math.max(8, t.total / Math.max(...trend.map(x => x.total), 1) * 120)}px` }} /><span className="text-xs text-zinc-500">{t.month}</span></div>)}</div><p className="mt-2 text-xs text-zinc-500">Gastos convertidos a {primaryCurrency}. Las barras vacías representan meses sin gastos.</p></Card>
       </div>
       {totals.size === 0 ? (
         <Card>
@@ -262,15 +275,13 @@ export default async function DashboardPage({
             >
               Editar
             </Link>
-            <form action={deleteTransaction.bind(null, t.id)}>
-              <DeleteButton />
-            </form>
+            <DeleteTransactionButton id={t.id} />
           </div>
         ))}
         {visibleTxs.length === 0 && (
           <p className="text-sm text-zinc-500">No hay movimientos para mostrar.</p>
         )}
-        {txs.length > pageSize && <div className="flex justify-between text-sm"><span>Página {pagina} de {Math.ceil(txs.length / pageSize)}</span>{pagina > 1 && <Link className="underline" href={`/?mes=${mes}&pagina=${pagina - 1}`}>Anterior</Link>}{pagina * pageSize < txs.length && <Link className="underline" href={`/?mes=${mes}&pagina=${pagina + 1}`}>Siguiente</Link>}</div>}
+        {txs.length > pageSize && <div className="flex justify-between text-sm"><span>Página {pagina} de {Math.ceil(txs.length / pageSize)}</span>{pagina > 1 && <Link className="underline" href={qs({ pagina: pagina - 1 })}>Anterior</Link>}{pagina * pageSize < txs.length && <Link className="underline" href={qs({ pagina: pagina + 1 })}>Siguiente</Link>}</div>}
       </div>
     </div>
   );

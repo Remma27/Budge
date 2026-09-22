@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/get-user";
-import { parseFechaLocal } from "@/lib/format";
+import { parseFechaLocal, toInputDate } from "@/lib/format";
 import {
   emptyToUndefined,
   firstError,
@@ -100,15 +102,73 @@ export async function updateTransaction(
   redirect("/");
 }
 
-export async function deleteTransaction(id: string): Promise<void> {
+export async function deleteTransaction(id: string): Promise<DeleteSnapshot | null> {
   const userId = await requireUserId();
   const existing = await prisma.transaction.findFirst({
     where: { id, userId },
   });
-  if (!existing) return;
+  if (!existing) return null;
   if (existing.workspaceId) await requireWorkspaceRole(userId, existing.workspaceId, (await import("@/generated/prisma/client")).WorkspaceRole.EDITOR);
   await prisma.transaction.delete({ where: { id } });
   revalidatePath("/");
+  return {
+    id: existing.id,
+    type: existing.type,
+    amount: existing.amount.toString(),
+    currency: existing.currency,
+    date: toInputDate(existing.date),
+    note: existing.note,
+    categoryId: existing.categoryId,
+    paymentMethodId: existing.paymentMethodId,
+    workspaceId: existing.workspaceId,
+  };
+}
+
+const restoreSchema = transactionSchema.extend({
+  id: z.string().trim().min(1).max(100),
+  workspaceId: z.string().trim().min(1).nullable().optional(),
+  // La fila borrada trae null donde el formulario trae undefined.
+  note: transactionSchema.shape.note.nullish(),
+  categoryId: transactionSchema.shape.categoryId.nullish(),
+  paymentMethodId: transactionSchema.shape.paymentMethodId.nullish(),
+});
+
+export type DeleteSnapshot = z.infer<typeof restoreSchema>;
+
+// Restaura un movimiento borrado (deshacer). Idempotente: si el id ya existe, no duplica.
+export async function restoreTransaction(snap: DeleteSnapshot): Promise<ActionResult> {
+  const userId = await requireUserId();
+  const parsed = restoreSchema.safeParse(snap);
+  if (!parsed.success) return { ok: false, error: "No se pudo restaurar el movimiento" };
+  const d = parsed.data;
+  const workspaceId = await getActionWorkspace(userId, d.workspaceId ?? null);
+  if (d.categoryId && !(await assertCategory(userId, d.categoryId, workspaceId))) {
+    return { ok: false, error: "Categoría inválida" };
+  }
+  if (d.paymentMethodId && !(await assertPaymentMethod(userId, d.paymentMethodId, workspaceId))) {
+    return { ok: false, error: "Medio de pago inválido" };
+  }
+  try {
+    await prisma.transaction.create({
+      data: {
+        id: d.id, userId, workspaceId,
+        type: d.type,
+        amount: d.amount,
+        currency: d.currency,
+        date: parseFechaLocal(d.date),
+        note: d.note ?? null,
+        categoryId: d.categoryId ?? null,
+        paymentMethodId: d.paymentMethodId ?? null,
+      },
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { ok: true };
+    }
+    return { ok: false, error: "No se pudo restaurar el movimiento" };
+  }
+  revalidatePath("/");
+  return { ok: true };
 }
 
 export async function importTransactions(rows: unknown[], requestedWorkspaceId?: string | null): Promise<ActionResult> {

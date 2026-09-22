@@ -9,5 +9,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
+    // Marca de tiempo de passwordChangedAt al emitir la sesión (revocación).
+    pwd?: number;
   }
 }

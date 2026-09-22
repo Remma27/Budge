@@ -1,10 +1,14 @@
 import { withAuth } from "next-auth/middleware";
 
-// Rutas que requieren sesión; lo demás (login, registro, API de auth) queda público.
+// Todo protegido por defecto salvo auth, API e iconos estáticos.
+// /api/* se excluye a propósito: cada ruta responde 401 JSON por sí misma y
+// un redirect del middleware a /login rompería clientes fetch (ej. sync offline).
 export default withAuth({
   pages: { signIn: "/login" },
 });
 
 export const config = {
-  matcher: ["/", "/categorias", "/transacciones/:path*"],
+  matcher: [
+    "/((?!api|login|register|recuperar-contrasena|restablecer-contrasena|invitaciones|_next|favicon.ico|manifest.webmanifest|sw.js|icon-192.svg|icon-512.svg).*)",
+  ],
 };

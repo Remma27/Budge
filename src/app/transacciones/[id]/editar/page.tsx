@@ -32,7 +32,7 @@ export default async function EditarPage({
 
   return (
     <div className="grid gap-4">
-      <Link href="/" className={linkCls}>
+      <Link href={workspaceId ? `/?workspaceId=${workspaceId}` : "/"} className={linkCls}>
         ← Volver
       </Link>
       <Card>
