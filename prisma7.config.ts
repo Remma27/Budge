@@ -3,6 +3,24 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+// Base shadow para `prisma migrate diff --from-migrations` y `migrate dev`.
+// Por defecto es <base>_shadow en el mismo host (la crea scripts/ensure-shadow-db.mjs
+// vía `pnpm db:diff`). Nunca puede ser igual a la base principal: Prisma la resetea.
+const deriveShadowUrl = (): string | undefined => {
+  if (process.env["SHADOW_DATABASE_URL"]) return process.env["SHADOW_DATABASE_URL"];
+  const url = process.env["DATABASE_URL"];
+  if (!url) return undefined;
+  try {
+    const parsed = new URL(url);
+    const database = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
+    if (!database) return undefined;
+    parsed.pathname = `/${database}_shadow`;
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+};
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
@@ -10,5 +28,6 @@ export default defineConfig({
   },
   datasource: {
     url: process.env["DATABASE_URL"],
+    shadowDatabaseUrl: deriveShadowUrl(),
   },
 });

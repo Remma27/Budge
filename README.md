@@ -33,7 +33,7 @@ Abre [http://localhost:3000](http://localhost:3000).
 | `pnpm build`      | Build de producción                   |
 | `pnpm lint`       | ESLint                                |
 | `pnpm db:migrate` | Aplica migraciones (`prisma migrate`, requiere salida directa al puerto 5432) |
-| `pnpm db:diff`    | Genera SQL offline (`prisma migrate diff`, sin conexión) |
+| `pnpm db:diff`    | Genera SQL de los cambios pendientes (`prisma migrate diff`; usa la base shadow `budge_shadow`, que crea `scripts/ensure-shadow-db.mjs` si falta) |
 | `pnpm db:apply`   | Aplica `prisma/migrations/0_init/migration.sql` por HTTPS (puerto 443) |
 | `pnpm db:check`   | Verifica tablas y conteos en la base     |
 | `pnpm db:generate`| Regenera el cliente de Prisma         |
