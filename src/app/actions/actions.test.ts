@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { prisma } = vi.hoisted(() => ({ prisma: {
   transaction: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn(), delete: vi.fn() },
   category: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
-  paymentMethod: { findFirst: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
+  paymentMethod: { findFirst: vi.fn(), create: vi.fn(), deleteMany: vi.fn(), updateMany: vi.fn() },
   recurringRule: { create: vi.fn(), findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findFirst: vi.fn(), deleteMany: vi.fn() },
   recurringRun: { createMany: vi.fn() },
   budget: { create: vi.fn(), findFirst: vi.fn(), deleteMany: vi.fn() },
@@ -36,7 +36,7 @@ import { updateTransaction, deleteTransaction } from "./transactions";
 import { generateDueRecurring } from "@/lib/recurring";
 import { createBudget } from "./budgets";
 import { updatePrimaryCurrency, upsertExchangeRate, deleteExchangeRate } from "./currency";
-import { createPaymentMethod } from "./payment-methods";
+import { createPaymentMethod, updatePaymentMethod } from "./payment-methods";
 import { createSavings, addContribution, deleteSavings } from "./savings";
 import { deleteBudget } from "./budgets";
 import { createWorkspace, deleteWorkspace, updateWorkspaceMember, removeWorkspaceMember, leaveWorkspace, createInvitation, revokeInvitation, acceptInvitation, migratePersonalData } from "./workspaces";
@@ -55,6 +55,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   prisma.category.findFirst.mockResolvedValue({ id: "cat-1" });
   prisma.paymentMethod.findFirst.mockResolvedValue({ id: "pay-1" });
+  prisma.paymentMethod.updateMany.mockResolvedValue({ count: 1 });
   prisma.budget.findFirst.mockResolvedValue({ id: "budget-1" });
   prisma.savingsGoal.findFirst.mockResolvedValue({ id: "goal-1" });
   prisma.transaction.findFirst.mockResolvedValue({ id: "tx-1", userId: "user-1", workspaceId: null });
@@ -223,6 +224,20 @@ describe("remaining financial actions", () => {
     expect(prisma.paymentMethod.create).toHaveBeenCalled();
     expect(await createPaymentMethod({ ok: true }, form({ name: "Visa", type: "CREDIT_CARD", closingDay: "32" }))).toEqual({ ok: false, error: "Datos de tarjeta inválidos" });
     expect(await createPaymentMethod({ ok: true }, form({ name: "", type: "UNKNOWN" }))).toEqual({ ok: false, error: "Medio de pago inválido" });
+  });
+
+  it("updates a payment method inside its scope and rejects bad payloads", async () => {
+    const payload = { id: "pay-1", name: "Visa", type: "CREDIT_CARD", openingBalance: "-500", creditLimit: "200000", closingDay: "10", paymentDay: "20" };
+    expect(await updatePaymentMethod({ ok: true }, form(payload))).toEqual({ ok: true });
+    expect(prisma.paymentMethod.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: "pay-1", userId: "user-1" }),
+      data: expect.objectContaining({ name: "Visa", creditLimit: 200000, openingBalance: -500, closingDay: 10, paymentDay: 20 }),
+    }));
+    prisma.paymentMethod.updateMany.mockResolvedValue({ count: 0 });
+    expect(await updatePaymentMethod({ ok: true }, form({ ...payload, id: "missing" }))).toEqual({ ok: false, error: "Medio de pago inválido" });
+    expect(await updatePaymentMethod({ ok: true }, form({ name: "Visa", type: "DEBIT" }))).toEqual({ ok: false, error: "Medio de pago inválido" });
+    expect(await updatePaymentMethod({ ok: true }, form({ ...payload, openingBalance: "bad" }))).toEqual({ ok: false, error: "Datos de tarjeta inválidos" });
+    expect(await createPaymentMethod({ ok: true }, form({ name: "Efectivo", type: "CASH", openingBalance: "bad" }))).toEqual({ ok: false, error: "Datos de tarjeta inválidos" });
   });
 
   it("creates savings goals and contributions only for valid goals", async () => {
