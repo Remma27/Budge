@@ -32,19 +32,19 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ w
     return { label: start.toLocaleDateString("es", { month: "short" }), total };
   });
   return <div className="grid gap-6">
-    <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-start">
       <div><h1 className="text-xl font-bold">Recurrentes</h1><p className="mt-1 text-sm text-zinc-600">Gastos e ingresos que se repiten automáticamente.</p></div>
-      <form action={generateDueRecurring}><input type="hidden" name="workspaceId" value={workspaceId ?? ""} /><button className="min-h-11 rounded-lg border px-3 py-2 text-sm">Registrar vencidos</button></form>
+      <form action={generateDueRecurring}><input type="hidden" name="workspaceId" value={workspaceId ?? ""} /><button className="min-h-11 w-full rounded-lg border px-3 py-2 text-sm sm:w-auto">Registrar vencidos</button></form>
     </div>
     <Card><h2 className="mb-4 font-semibold">Nuevo recurrente</h2><SimpleForm action={createRecurring} submitLabel="Crear recurrente" successMessage="Recurrente creado."><input type="hidden" name="workspaceId" value={workspaceId ?? ""} /><RuleFields categories={categories} paymentMethods={paymentMethods} currency={owner.primaryCurrency} /></SimpleForm></Card>
     {rules.map(r => <Card key={r.id}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-start">
         <div className="min-w-0"><h2 className="break-words font-semibold">{r.note || r.provider || "Recurrente"}</h2>
           <p className="mt-1 text-sm text-zinc-600">{r.type === "INCOME" ? "Ingreso" : "Gasto"} · {frequencyLabels[r.frequency]} · {formatMoney(r.amount, r.currency)}</p>
           <p className="mt-1 text-sm">Categoría: <strong>{r.category?.name ?? "Sin categoría"}</strong></p>
           <p className="mt-1 text-sm text-zinc-600">{r.paymentMethod?.name ?? "Sin medio de pago"} · Próximo: {toInputDate(r.nextRun)} · {r.isActive ? "Activo" : "Pausado"}</p>
         </div>
-        <div className="flex flex-wrap gap-2"><form action={toggleRecurring.bind(null, r.id, workspaceId ?? undefined)}><button className="min-h-11 rounded-lg border px-3 py-2 text-sm">{r.isActive ? "Pausar" : "Activar"}</button></form><form action={deleteRecurring.bind(null, r.id, workspaceId ?? undefined)}><button className={`${btnDangerCls} min-h-11`}>Eliminar</button></form></div>
+        <div className="grid grid-cols-2 gap-2 sm:flex"><form action={toggleRecurring.bind(null, r.id, workspaceId ?? undefined)}><button className="min-h-11 w-full rounded-lg border px-3 py-2 text-sm">{r.isActive ? "Pausar" : "Activar"}</button></form><form action={deleteRecurring.bind(null, r.id, workspaceId ?? undefined)}><button className={`${btnDangerCls} min-h-11 w-full`}>Eliminar</button></form></div>
       </div>
       <details className="mt-4"><summary className="cursor-pointer py-2 text-sm font-medium underline underline-offset-4">Editar recurrente</summary>
         <div className="mt-3"><SimpleForm action={updateRecurring.bind(null, r.id)} submitLabel="Guardar cambios" successMessage="Recurrente actualizado. La categoría se usará en los próximos movimientos.">
@@ -55,7 +55,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ w
       <details className="mt-2"><summary className="cursor-pointer py-2 text-sm text-zinc-600">Últimos movimientos generados ({r.recurringRuns.length})</summary><ol className="mt-2 grid gap-2 text-sm">{r.recurringRuns.map(run => <li key={run.id} className="flex flex-wrap justify-between gap-1"><span>Programado: {toInputDate(run.scheduledDate)}</span><span>Registrado: {toInputDate(run.createdAt)}</span></li>)}</ol></details>
     </Card>)}
     <Card><h2 className="font-semibold">Próximos 12 meses de gastos</h2><p className="mt-1 text-sm text-zinc-600">Solo recurrentes activos en {owner.primaryCurrency}.</p>
-      <div className="mt-5 overflow-x-auto"><div className="grid min-w-[36rem] grid-cols-12 gap-2">{projection.map((item, i) => <div key={i} className="grid gap-2 text-center"><span className="text-xs tabular-nums">{Math.round(item.total).toLocaleString("es")}</span><div className="flex h-28 items-end rounded-t bg-zinc-100"><div className="w-full rounded-t bg-indigo-600" style={{ height: `${item.total / Math.max(...projection.map(p => p.total), 1) * 100}%` }} /></div><span className="text-xs capitalize">{item.label}</span></div>)}</div></div>
+      <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-12">{projection.map((item, i) => <div key={i} className="grid min-w-0 gap-2 text-center"><span className="truncate text-xs tabular-nums">{Math.round(item.total).toLocaleString("es")}</span><div className="flex h-20 items-end rounded-t bg-zinc-100 sm:h-28"><div className="w-full rounded-t bg-indigo-600" style={{ height: `${item.total / Math.max(...projection.map(p => p.total), 1) * 100}%` }} /></div><span className="text-xs capitalize">{item.label}</span></div>)}</div>
     </Card>
   </div>;
 }
