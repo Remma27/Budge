@@ -59,6 +59,7 @@ beforeEach(() => {
   prisma.savingsGoal.findFirst.mockResolvedValue({ id: "goal-1" });
   prisma.transaction.findFirst.mockResolvedValue({ id: "tx-1", userId: "user-1", workspaceId: null });
   prisma.recurringRule.findFirst.mockResolvedValue({ id: "rule-1", isActive: true });
+  prisma.recurringRule.updateMany.mockResolvedValue({ count: 1 });
   prisma.$transaction.mockResolvedValue([]);
 });
 
@@ -177,6 +178,24 @@ describe("recurring generation", () => {
 });
 
 describe("remaining financial actions", () => {
+  it("assigns a category to a recurring rule and refuses missing records", async () => {
+    const values = { type: "EXPENSE", amount: "25000", currency: "CRC", frequency: "BIWEEKLY", nextRun: "2026-10-01", categoryId: "cat-1" };
+    expect(await updateRecurring("rule-1", { ok: true }, form(values))).toEqual({ ok: true });
+    expect(prisma.recurringRule.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "rule-1", userId: "user-1", workspaceId: null }, data: expect.objectContaining({ categoryId: "cat-1", frequency: "BIWEEKLY" }) }));
+    prisma.recurringRule.updateMany.mockResolvedValueOnce({ count: 0 });
+    expect((await updateRecurring("missing", { ok: true }, form(values))).ok).toBe(false);
+  });
+
+  it("creates savings without a target or date and validates optional fields", async () => {
+    expect(await createSavings({ ok: true }, form({ name: "Reserva", target: "", targetDate: "", frequency: "MONTHLY" }))).toEqual({ ok: true });
+    expect(prisma.savingsGoal.create).toHaveBeenCalledWith({ data: { userId: "user-1", workspaceId: null, name: "Reserva", target: null, targetDate: null, frequency: "MONTHLY", currency: "CRC", balance: "0" } });
+    prisma.savingsGoal.create.mockClear();
+    const invalidInputs: Record<string, string>[] = [{ frequency: "OTHER" }, { targetDate: "2026-02-30" }, { initialAmount: "-1" }];
+    for (const invalid of invalidInputs) {
+      expect((await createSavings({ ok: true }, form({ name: "Reserva", ...invalid }))).ok).toBe(false);
+    }
+    expect(prisma.savingsGoal.create).not.toHaveBeenCalled();
+  });
   it("creates a budget only for an existing category", async () => {
     const result = await createBudget({ ok: true }, form({ categoryId: "cat-1", amount: "100", currency: "CRC", month: "2026-09" }));
     expect(result).toEqual({ ok: true });
@@ -211,7 +230,7 @@ describe("remaining financial actions", () => {
     expect(await addContribution("goal-1", { ok: true }, form({ amount: "50", note: "Aporte" }))).toEqual({ ok: true });
     expect(prisma.savingsContribution.create).toHaveBeenCalled();
     expect(await addContribution("missing", { ok: true }, form({ amount: "0" }))).toEqual({ ok: false, error: "Aporte inválido" });
-    expect(await createSavings({ ok: true }, form({ name: "", target: "0", currency: "bad" }))).toEqual({ ok: false, error: "Datos de ahorro inválidos" });
+    expect((await createSavings({ ok: true }, form({ name: "", target: "0", currency: "bad" }))).ok).toBe(false);
     prisma.savingsGoal.findFirst.mockResolvedValue(null);
     expect(await addContribution("missing", { ok: true }, form({ amount: "50" }))).toEqual({ ok: false, error: "Aporte inválido" });
     expect(await createSavings({ ok: true }, form({ name: "Fondo", target: "1000", currency: "CRC", targetDate: "2026-12-01" }))).toEqual({ ok: true });

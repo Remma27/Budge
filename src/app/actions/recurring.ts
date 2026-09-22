@@ -32,8 +32,14 @@ export async function updateRecurring(id: string, _p: ActionResult, f: FormData)
   if (p.data.categoryId && !(await prisma.category.findFirst({ where: { id: p.data.categoryId, ...scopeWorkspace(userId, workspaceId) } }))) return { ok: false, error: "Categoría inválida" };
    const paymentMethodId = emptyToUndefined(f.get("paymentMethodId"));
    if (paymentMethodId && !(await prisma.paymentMethod.findFirst({ where: { id: paymentMethodId, ...scopeWorkspace(userId, workspaceId) } }))) return { ok: false, error: "Medio de pago inválido" };
-     await prisma.recurringRule.updateMany({ where: { id, ...scopeWorkspace(userId, workspaceId) }, data: { ...p.data, kind: f.get("kind") === "MEMBERSHIP" ? "MEMBERSHIP" : "SERVICE", provider: emptyToUndefined(f.get("provider")) ?? null, paymentMethodId: paymentMethodId ?? null, chargeDay, nextRun: parseFechaLocal(p.data.nextRun), note: p.data.note ?? null, categoryId: p.data.categoryId ?? null } });
-  revalidatePath("/recurrentes"); return { ok: true };
+   try {
+     const result = await prisma.recurringRule.updateMany({ where: { id, ...scopeWorkspace(userId, workspaceId) }, data: { ...p.data, kind: f.get("kind") === "MEMBERSHIP" ? "MEMBERSHIP" : "SERVICE", provider: emptyToUndefined(f.get("provider")) ?? null, paymentMethodId: paymentMethodId ?? null, chargeDay, nextRun: parseFechaLocal(p.data.nextRun), note: p.data.note ?? null, categoryId: p.data.categoryId ?? null } });
+     if (result.count === 0) return { ok: false, error: "No se encontró el recurrente en este espacio. Recarga la página." };
+   } catch (error) {
+     console.error("updateRecurring failed", error);
+     return { ok: false, error: "No se pudo guardar el recurrente. Intenta de nuevo." };
+   }
+   revalidatePath("/recurrentes"); revalidatePath("/"); return { ok: true };
 }
 
 export async function toggleRecurring(id: string, workspaceId?: string) { const userId = await requireUserId(); const scope=scopeWorkspace(userId, await getActionWorkspace(userId,workspaceId)); const r = await prisma.recurringRule.findFirst({ where: { id, ...scope } }); if (r) await prisma.recurringRule.update({ where: { id }, data: { isActive: !r.isActive } }); revalidatePath("/recurrentes"); }

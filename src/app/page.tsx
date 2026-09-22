@@ -23,6 +23,7 @@ import { getWorkspaceContext, scopeWorkspace } from "@/lib/workspace";
 import { generateDueRecurring } from "@/lib/recurring";
 import { fetchExchangeRate } from "@/lib/exchange-rates";
 import { findBudgets } from "@/lib/budgets";
+import { budgetsForMonth, effectiveBudgetAmount } from "@/lib/budget-amounts";
 
 function nextPaymentDate(month: string, day: number | null) {
   if (!day) return null;
@@ -49,7 +50,7 @@ export default async function DashboardPage({
   const pagina = Math.max(1, Number(params?.pagina) || 1);
   const { inicio, fin, etiqueta } = rangoMes(mes);
 
-  const [categories, paymentMethods, txs, budgets, user, rates] = await Promise.all([
+  const [categories, paymentMethods, txs, budgets, user, rates, periodTransactions] = await Promise.all([
     prisma.category.findMany({
       where: scope,
       orderBy: { name: "asc" },
@@ -61,9 +62,10 @@ export default async function DashboardPage({
        include: { category: { select: { id: true, name: true, color: true } }, paymentMethod: { select: { id: true, name: true, type: true } } },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     }),
-     findBudgets(userId, workspaceId).then(rows => rows.filter(row => row.month === mes)),
+     findBudgets(userId, workspaceId).then(rows => budgetsForMonth(rows, mes)),
      workspaceId ? prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId }, select: { primaryCurrency: true } }) : prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { primaryCurrency: true } }),
     prisma.exchangeRate.findMany({ where: { userId }, select: { from: true, to: true, rate: true } }),
+    prisma.transaction.findMany({ where: { ...scope, date: { gte: inicio, lt: fin } }, select: { type: true, amount: true, categoryId: true, currency: true } }),
   ]);
    const pageSize = 20;
    const visibleTxs = txs.slice((pagina - 1) * pageSize, pagina * pageSize);
@@ -108,6 +110,7 @@ export default async function DashboardPage({
 
   return (
     <div className="grid gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 p-4"><p className="text-sm">¿Ya recibiste tu salario?</p><Link className="text-sm font-semibold text-indigo-700 underline underline-offset-4" href={`/ingresos?mes=${mes}${workspaceId ? `&workspaceId=${encodeURIComponent(workspaceId)}` : ""}`}>Registrar salario o ingreso</Link></div>
       <div className="flex items-center justify-between gap-2">
         <Link
           href={`/?mes=${moverMes(mes, -1)}`}
@@ -175,7 +178,7 @@ export default async function DashboardPage({
         <Card><h2 className="mb-4 font-bold">Gastos por tipo de pago</h2><div className="grid gap-3 text-sm">{[...paymentTotals.values()].map((payment) => <div key={payment.name}><div className="flex justify-between"><span>{payment.name}</span><span>{formatMoney(payment.total, primaryCurrency)}</span></div><div className="mt-1 h-2 rounded bg-zinc-200 dark:bg-zinc-800"><div className="h-2 rounded bg-violet-500" style={{ width: `${payment.total / maxPayment * 100}%` }} /></div></div>)}{paymentTotals.size === 0 && <p className="text-zinc-500">Aún no hay gastos con medio de pago.</p>}</div></Card>
         <Card><h2 className="mb-4 font-bold">Tarjetas y próximo pago</h2>{creditCards.length ? <div className="grid gap-3 text-sm">{creditCards.map((card) => { const spent = txs.filter((t) => t.type === "EXPENSE" && t.paymentMethodId === card.id).reduce((sum, t) => sum + Number(t.amount), 0); return <div key={card.id} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"><div className="flex justify-between font-medium"><span>{card.name}</span><span>{formatMoney(spent, primaryCurrency)}</span></div><p className="mt-1 text-xs text-zinc-500">Corte: día {card.closingDay ?? "-"} · Pago: {nextPaymentDate(mes, card.paymentDay) ?? "sin configurar"}</p><p className="mt-1 text-xs text-zinc-500">Este periodo: gastos registrados hasta el corte.</p></div>})}</div> : <p className="text-sm text-zinc-500">Configura una tarjeta en Medios de pago para ver su próximo pago.</p>}</Card>
       </div>
-       {budgets.length > 0 && <Card><h2 className="mb-3 font-bold">Presupuesto del mes</h2><div className="grid gap-3 text-sm">{budgets.map(b => { const spent = txs.filter(t => t.type === "EXPENSE" && t.categoryId === b.categoryId && t.currency === b.currency).reduce((sum, t) => sum + Number(t.amount), 0); const income = txs.filter(t => t.type === "INCOME" && t.currency === b.currency).reduce((sum, t) => sum + Number(t.amount), 0); const effectiveAmount = b.budgetMode === "PERCENTAGE" ? income * Number(b.percentage) / 100 : Number(b.amount); const pct = effectiveAmount ? Math.min(100, Math.round(spent / effectiveAmount * 100)) : 0; return <div key={b.id}><div className="flex justify-between"><span>{b.category.name} · {b.currency}</span><span className="font-medium">{formatMoney(spent, b.currency)} / {formatMoney(effectiveAmount, b.currency)}</span></div>{b.budgetMode === "PERCENTAGE" && <p className="text-xs text-zinc-500">{String(b.percentage)}% de ingresos del periodo ({formatMoney(income, b.currency)})</p>}<div className="mt-1 h-2 rounded bg-zinc-200"><div className={`h-2 rounded ${pct >= 100 ? "bg-red-600" : pct >= 80 ? "bg-amber-500" : "bg-green-600"}`} style={{ width: `${pct}%` }} /></div>{pct >= 80 && <p className={`mt-1 text-xs ${pct >= 100 ? "text-red-600" : "text-amber-600"}`}>{pct >= 100 ? "Presupuesto excedido" : "Alerta: alcanzaste 80%"}</p>}</div>})}</div></Card>}
+       {budgets.length > 0 && <Card><h2 className="mb-3 font-bold">Presupuesto del mes</h2><div className="grid gap-3 text-sm">{budgets.map(b => { const spent = periodTransactions.filter(t => t.type === "EXPENSE" && t.categoryId === b.categoryId && t.currency === b.currency).reduce((sum, t) => sum + Number(t.amount), 0); const income = periodTransactions.filter(t => t.type === "INCOME" && t.currency === b.currency).reduce((sum, t) => sum + Number(t.amount), 0); const effectiveAmount = effectiveBudgetAmount(b, income); const pct = effectiveAmount > 0 ? Math.min(100, spent / effectiveAmount * 100) : spent > 0 ? 100 : 0; return <div key={b.id}><div className="flex flex-wrap justify-between gap-2"><span>{b.category.name} · {b.currency}</span><span className="font-medium">{formatMoney(spent, b.currency)} / {formatMoney(effectiveAmount, b.currency)}</span></div>{b.budgetMode === "PERCENTAGE" && <p className="text-xs text-zinc-500">{String(b.percentage)}% de ingresos del periodo ({formatMoney(income, b.currency)})</p>}<div className="mt-1 h-2 rounded bg-zinc-200"><div className={`h-2 rounded ${pct >= 100 ? "bg-red-600" : pct >= 80 ? "bg-amber-500" : "bg-green-600"}`} style={{ width: `${pct}%` }} /></div>{pct >= 80 && <p className={`mt-1 text-xs ${pct >= 100 ? "text-red-600" : "text-amber-600"}`}>{spent > effectiveAmount ? "Presupuesto excedido" : pct >= 100 ? "Presupuesto alcanzado" : "Alerta: alcanzaste 80%"}</p>}</div>})}</div></Card>}
 
       <Card>
         <h2 className="mb-4 font-bold">Nuevo movimiento</h2>

@@ -30,6 +30,7 @@ export function TransactionForm({
   workspaceId = null,
   primaryCurrency = "CRC",
   paymentMethods = [],
+  incomeOnly = false,
 }: {
   action: TransactionAction;
   categories: { id: string; name: string }[];
@@ -39,6 +40,7 @@ export function TransactionForm({
   workspaceId?: string | null;
   primaryCurrency?: string;
   paymentMethods?: { id: string; name: string }[];
+  incomeOnly?: boolean;
 }) {
   // ponytail: al guardar con éxito se remonta el form (key) en vez de
   // resetearlo en un effect (evita set-state-in-effect).
@@ -88,7 +90,7 @@ export function TransactionForm({
             defaultValue={initial?.type ?? "EXPENSE"}
             required
           >
-            <option value="EXPENSE">Gasto</option>
+            {!incomeOnly && <option value="EXPENSE">Gasto</option>}
             <option value="INCOME">Ingreso</option>
           </select>
         </div>
@@ -182,6 +184,7 @@ export function TransactionForm({
       <button type="submit" className={btnPrimaryCls} disabled={pending}>
         {pending ? "Guardando…" : submitLabel}
       </button>
+      {state.ok && formKey > 0 && !offline && <p role="status" className="text-sm text-green-700">Movimiento registrado.</p>}
     </form>
   );
 }

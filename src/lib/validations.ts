@@ -63,10 +63,18 @@ export const budgetSchema = z.object({
 
 export const recurringSchema = z.object({
   type: z.enum(["INCOME", "EXPENSE"]), amount: z.string().trim().regex(/^\d{1,10}(\.\d{1,2})?$/).refine((v) => Number(v) > 0),
-  currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/).default("MXN"), frequency: z.enum(["WEEKLY", "MONTHLY", "YEARLY"]),
+  currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/).default("MXN"), frequency: z.enum(["WEEKLY", "BIWEEKLY", "MONTHLY", "YEARLY"]),
   nextRun: z.string().trim().refine(validDate), note: z.string().trim().max(280).optional(), categoryId: z.string().trim().min(1).optional(),
 });
 export const recurringChargeDaySchema = z.coerce.number().int().min(1).max(31);
+export const savingsSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  target: transactionSchema.shape.amount.optional(),
+  initialAmount: z.string().trim().regex(/^\d{1,10}(\.\d{1,2})?$/),
+  currency: transactionSchema.shape.currency,
+  frequency: z.enum(["DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY"]).optional(),
+  targetDate: transactionSchema.shape.date.optional(),
+});
 export const currencySchema = z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/);
 export const exchangeRateSchema = z.object({
   from: currencySchema,
@@ -86,6 +94,11 @@ const FIELD_MESSAGES: Record<string, string> = {
   date: "Fecha inválida",
   note: "Nota muy larga (máx. 280 caracteres)",
   categoryId: "Categoría inválida",
+  nextRun: "Fecha del próximo movimiento inválida",
+  frequency: "Selecciona una periodicidad válida",
+  target: "Meta inválida: usa un monto mayor que cero o deja el campo vacío",
+  initialAmount: "Monto inicial inválido: usa cero o un monto positivo con hasta 2 decimales",
+  targetDate: "Fecha de meta inválida",
   from: "Moneda de origen inválida",
   to: "La moneda destino debe ser distinta y válida",
   rate: "Tasa inválida (debe ser mayor que cero)",
